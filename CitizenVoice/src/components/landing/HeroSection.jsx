@@ -157,36 +157,12 @@ export function HeroSection() {
                 Report an Issue
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <a
-                href="#how-it-works"
-                className="inline-flex items-center gap-2 rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur transition-all hover:bg-white/20"
-              >
-                See How It Works
-              </a>
+             
             </div>
           </div>
         </div>
 
-        {/* ================== PARTNERS / STATS ================== */}
-        <div className="relative z-10 mx-auto mt-10 w-full max-w-6xl px-6 pb-24">
-          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
-            {[
-              { value: "10K+", label: "Issues Resolved" },
-              { value: "50+", label: "Cities Active" },
-              { value: "2 min", label: "Avg Report Time" },
-              { value: "85%", label: "AI Accuracy" },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-3xl font-display font-bold bg-gradient-to-r from-rose-500 to-violet-500 bg-clip-text text-transparent">
-                  {stat.value}
-                </div>
-                <div className="text-xs uppercase tracking-wider text-white/50 mt-1">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        
 
         {/* ================== FOREGROUND ================== */}
         {/* Center-bottom rectangular glow with pulse animation */}

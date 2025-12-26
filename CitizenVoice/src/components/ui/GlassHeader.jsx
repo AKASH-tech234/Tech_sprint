@@ -73,7 +73,6 @@ export function GlassHeader() {
   const navItems = [
     "Features",
     "How It Works",
-    "Impact",
     "For Officials",
     "About",
   ];
@@ -153,16 +152,16 @@ export function GlassHeader() {
               {/* Desktop CTA */}
               <div className="hidden md:flex items-center gap-3">
                 <Link
-                  to="/signup"
+                  to="/login"
                   className="px-4 py-2 text-sm text-white/70 hover:text-white transition-colors font-medium"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-5 py-2 text-sm font-semibold text-black bg-white rounded-full shadow-lg shadow-white/20 hover:scale-105 transition-all"
+                  className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-rose-500 via-pink-500 to-violet-500 rounded-full shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 hover:scale-105 transition-all"
                 >
-                  Report Issue
+                  Sign up
                 </Link>
               </div>
 
@@ -207,10 +206,17 @@ export function GlassHeader() {
                     {item}
                   </a>
                 ))}
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-white/10 space-y-3">
+                  <Link
+                    to="/login"
+                    className="block w-full px-5 py-2.5 text-sm font-semibold text-white border border-white/20 rounded-full text-center hover:bg-white/10 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
                   <Link
                     to="/signup"
-                    className="block w-full px-5 py-2.5 text-sm font-semibold text-black bg-white rounded-full shadow-lg shadow-white/20 text-center"
+                    className="block w-full px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-rose-500 via-pink-500 to-violet-500 rounded-full shadow-lg shadow-rose-500/25 text-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Report Issue

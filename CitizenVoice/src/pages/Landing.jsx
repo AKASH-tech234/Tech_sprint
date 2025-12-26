@@ -79,7 +79,6 @@ export function Landing() {
 
       <HowItWorksSection />
       <CardsSection />
-      <ImpactSection />
       <CTASection />
       <Footer />
     </div>
