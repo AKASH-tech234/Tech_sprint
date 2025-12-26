@@ -1,0 +1,352 @@
+// src/pages/Dashboard/OfficialDashboard.jsx
+import React from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
+import { DashboardLayout } from "../../components/Dashboard/Shared/DashboardLayout";
+import { StatsCard } from "../../components/Dashboard/Shared/StatsCard";
+import { IssueManagement } from "../../components/Dashboard/Official/issuemanagment";
+import { TeamManagement } from "../../components/Dashboard/Official/Teammanagement";
+import { Analytics } from "../../components/Dashboard/Official/Analytics";
+import {
+  Inbox,
+  Users,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  ArrowRight,
+  MapPin,
+  TrendingUp,
+} from "lucide-react";
+
+// Mock stats
+const mockStats = {
+  pending: 23,
+  assigned: 12,
+  resolvedToday: 8,
+  avgTime: "2.4 days",
+};
+
+// Mock priority issues
+const mockPriorityIssues = [
+  {
+    id: "ISS-005",
+    title: "Traffic signal malfunction at Main & 5th",
+    priority: "high",
+    status: "new",
+    location: "Main & 5th Intersection",
+    reporter: "Chris Lee",
+    createdAt: "2 hours ago",
+  },
+  {
+    id: "ISS-001",
+    title: "Large pothole causing accidents",
+    priority: "high",
+    status: "in-progress",
+    location: "123 Main Street",
+    reporter: "Jane Smith",
+    createdAt: "3 days ago",
+  },
+  {
+    id: "ISS-008",
+    title: "Water main leak flooding street",
+    priority: "high",
+    status: "new",
+    location: "45 Oak Avenue",
+    reporter: "Mike Johnson",
+    createdAt: "5 hours ago",
+  },
+];
+
+// Dashboard Home Component
+function DashboardHome() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="space-y-8">
+      {/* Welcome section */}
+      <div>
+        <h1 className="text-2xl font-bold text-white sm:text-3xl">
+          Official Dashboard 🏛️
+        </h1>
+        <p className="text-white/60">
+          Manage and resolve community issues efficiently.
+        </p>
+      </div>
+
+      {/* Stats cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard
+          title="Pending Issues"
+          value={mockStats.pending}
+          icon={Inbox}
+          color="amber"
+        />
+        <StatsCard
+          title="Assigned to Me"
+          value={mockStats.assigned}
+          icon={Users}
+          color="violet"
+        />
+        <StatsCard
+          title="Resolved Today"
+          value={mockStats.resolvedToday}
+          icon={CheckCircle2}
+          color="emerald"
+          trend="up"
+          trendValue={15}
+        />
+        <StatsCard
+          title="Avg. Resolution Time"
+          value={mockStats.avgTime}
+          icon={Clock}
+          color="cyan"
+          trend="up"
+          trendValue={8}
+        />
+      </div>
+
+      {/* Priority Queue */}
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-white">Priority Queue</h2>
+          <div className="flex gap-2">
+            <button className="rounded-full bg-rose-500/20 px-3 py-1 text-xs text-rose-400">
+              High Priority
+            </button>
+            <button className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/60 hover:bg-white/20">
+              Overdue
+            </button>
+            <button className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/60 hover:bg-white/20">
+              New
+            </button>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {mockPriorityIssues.map((issue) => (
+            <div
+              key={issue.id}
+              className="flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 transition-all hover:bg-rose-500/20"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/20">
+                  <AlertTriangle className="h-5 w-5 text-rose-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/40">{issue.id}</span>
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-xs ${
+                        issue.status === "new"
+                          ? "bg-gray-500/20 text-gray-400"
+                          : "bg-amber-500/20 text-amber-400"
+                      }`}
+                    >
+                      {issue.status}
+                    </span>
+                  </div>
+                  <h4 className="font-medium text-white">{issue.title}</h4>
+                  <div className="mt-1 flex items-center gap-3 text-xs text-white/40">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {issue.location}
+                    </span>
+                    <span>•</span>
+                    <span>{issue.createdAt}</span>
+                  </div>
+                </div>
+              </div>
+              <button className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-rose-600">
+                Take Action
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Stats Summary */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Today's Activity */}
+        <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
+            <TrendingUp className="h-5 w-5 text-emerald-400" />
+            Today's Activity
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-white/60">Issues Received</span>
+              <span className="font-semibold text-white">15</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-white/60">Issues Resolved</span>
+              <span className="font-semibold text-emerald-400">8</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-white/60">In Progress</span>
+              <span className="font-semibold text-amber-400">12</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-white/60">Escalated</span>
+              <span className="font-semibold text-rose-400">2</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Team Status */}
+        <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
+              <Users className="h-5 w-5 text-violet-400" />
+              Team Status
+            </h3>
+            <button
+              onClick={() => navigate("/dashboard/official/team")}
+              className="flex items-center gap-1 text-sm text-rose-400 hover:text-rose-300"
+            >
+              View all
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            {[
+              { name: "John Doe", status: "active", tasks: 8 },
+              { name: "Sarah Wilson", status: "active", tasks: 3 },
+              { name: "Mike Chen", status: "busy", tasks: 12 },
+              { name: "Emily Davis", status: "offline", tasks: 0 },
+            ].map((member) => (
+              <div
+                key={member.name}
+                className="flex items-center justify-between rounded-lg bg-white/5 p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-xs font-medium text-white">
+                      {member.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </div>
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0a0a0a] ${
+                        member.status === "active"
+                          ? "bg-emerald-500"
+                          : member.status === "busy"
+                          ? "bg-amber-500"
+                          : "bg-gray-500"
+                      }`}
+                    />
+                  </div>
+                  <span className="text-sm text-white">{member.name}</span>
+                </div>
+                <span className="text-sm text-white/40">
+                  {member.tasks} tasks
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div>
+        <h3 className="mb-4 text-lg font-semibold text-white">Quick Actions</h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Create Work Order", icon: "📋" },
+            { label: "Schedule Inspection", icon: "🔍" },
+            { label: "Request Resources", icon: "📦" },
+            { label: "Generate Report", icon: "📊" },
+          ].map((action) => (
+            <button
+              key={action.label}
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-rose-500/30 hover:bg-white/10"
+            >
+              <span className="text-2xl">{action.icon}</span>
+              <span className="text-sm font-medium text-white">
+                {action.label}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Map placeholder
+function MapPage() {
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-white">Area Map</h1>
+      <div className="flex h-[500px] items-center justify-center rounded-xl border border-white/10 bg-white/5">
+        <div className="text-center">
+          <MapPin className="mx-auto mb-2 h-16 w-16 text-white/20" />
+          <p className="text-lg text-white/40">Area Map View</p>
+          <p className="text-sm text-white/20">
+            Integration with Leaflet/Mapbox coming soon
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Settings placeholder
+function SettingsPage() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-white">Settings</h1>
+      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+        <h2 className="mb-4 text-lg font-semibold text-white">
+          Official Profile
+        </h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-white/60">Department</label>
+            <input
+              type="text"
+              defaultValue="Roads & Infrastructure"
+              className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-white/60">
+              Notification Preferences
+            </label>
+            <div className="mt-2 space-y-2">
+              {[
+                "New issue assignments",
+                "Status updates",
+                "Team messages",
+                "Daily summary",
+              ].map((item) => (
+                <label key={item} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    className="rounded border-white/20 bg-white/5 text-rose-500"
+                  />
+                  <span className="text-sm text-white/80">{item}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main Official Dashboard with routes
+export default function OfficialDashboard() {
+  return (
+    <DashboardLayout role="official">
+      <Routes>
+        <Route index element={<DashboardHome />} />
+        <Route path="assigned" element={<IssueManagement />} />
+        <Route path="team" element={<TeamManagement />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="map" element={<MapPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+      </Routes>
+    </DashboardLayout>
+  );
+}

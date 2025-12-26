@@ -1,10 +1,18 @@
+// src/pages/Login.jsx (Updated)
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 import { Logo } from "../components/ui/Logo";
+import { useAuth } from "../context/AuthContext";
 
 export function Login() {
+  const navigate = useNavigate();
+  const { login, googleAuth } = useAuth();
+
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -13,25 +21,53 @@ export function Login() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setError(""); // Clear error on input change
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Frontend only - just log the data
-    console.log("Login Data:", formData);
-    alert("Login attempted");
+    setIsLoading(true);
+    setError("");
+
+    const result = await login(formData.email, formData.password);
+
+    if (result.success) {
+      // Redirect based on role
+      const dashboardPath = `/dashboard/${result.user.role}`;
+      navigate(dashboardPath, { replace: true });
+    } else {
+      setError(result.error || "Login failed. Please try again.");
+    }
+
+    setIsLoading(false);
   };
 
-  const handleGoogleLogin = () => {
-    console.log("Google Login clicked");
-    alert("Google login attempted");
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsLoading(true);
+    setError("");
+
+    // For login, we'll use "citizen" as default role
+    // Users can change their role from settings if needed
+    const result = await googleAuth(credentialResponse.credential, "citizen");
+
+    if (result.success) {
+      const dashboardPath = `/dashboard/${result.user.role}`;
+      navigate(dashboardPath, { replace: true });
+    } else {
+      setError(result.error || "Google login failed. Please try again.");
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleGoogleError = () => {
+    setError("Google sign-in was cancelled or failed. Please try again.");
   };
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex">
-      {/* Left Side - Branding */}
+      {/* Left Side - Branding (same as before) */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        {/* Background Gradient */}
         <div
           className="absolute inset-0"
           style={{
@@ -43,8 +79,6 @@ export function Login() {
             backgroundColor: "#0a0a0a",
           }}
         />
-
-        {/* Grid Pattern */}
         <div
           className="absolute inset-0 opacity-20"
           style={{
@@ -54,28 +88,20 @@ export function Login() {
             ].join(","),
           }}
         />
-
-        {/* Content */}
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           <Link to="/" className="absolute top-8 left-8">
             <Logo size="default" />
           </Link>
-
           <div className="max-w-lg">
             <h1
               className="font-playfair text-5xl xl:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-rose-100 to-violet-200 bg-clip-text text-transparent"
-              style={{
-                lineHeight: "1.2",
-              }}
+              style={{ lineHeight: "1.2" }}
             >
               Welcome Back to CitizenVoice
             </h1>
             <p className="text-lg text-white/70 mb-12">
-              Sign in to continue making a difference in your community. Track
-              your reports, engage with officials, and drive real change.
+              Sign in to continue making a difference in your community.
             </p>
-
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-8">
               <div>
                 <div className="text-3xl font-bold bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent mb-2">
@@ -103,7 +129,6 @@ export function Login() {
       {/* Right Side - Login Form */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
-          {/* Back to Home Link (Mobile) */}
           <Link
             to="/"
             className="lg:hidden inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors mb-8"
@@ -112,14 +137,12 @@ export function Login() {
             <span>Back to Home</span>
           </Link>
 
-          {/* Logo (Mobile) */}
           <div className="lg:hidden mb-8">
             <Logo size="default" />
           </div>
 
           {/* Login Card */}
           <div className="relative">
-            {/* Glass Card */}
             <div
               className="relative rounded-2xl p-8 backdrop-blur-xl border"
               style={{
@@ -132,7 +155,6 @@ export function Login() {
                 ].join(","),
               }}
             >
-              {/* Header */}
               <div className="text-center mb-8">
                 <h2 className="font-playfair text-3xl font-bold text-white mb-2">
                   Sign In
@@ -142,9 +164,15 @@ export function Login() {
                 </p>
               </div>
 
-              {/* Form */}
+              {/* Error Alert */}
+              {error && (
+                <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/50 flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-200">{error}</p>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Email Input */}
                 <div>
                   <label
                     htmlFor="email"
@@ -166,11 +194,11 @@ export function Login() {
                       className="w-full pl-12 pr-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500/50 transition-all"
                       placeholder="you@example.com"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
 
-                {/* Password Input */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label
@@ -200,6 +228,7 @@ export function Login() {
                       className="w-full pl-12 pr-12 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500/50 transition-all"
                       placeholder="••••••••"
                       required
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
@@ -211,7 +240,6 @@ export function Login() {
                   </div>
                 </div>
 
-                {/* Remember Me */}
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -226,16 +254,15 @@ export function Login() {
                   </label>
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-rose-500 via-pink-500 to-violet-500 hover:from-rose-600 hover:via-pink-600 hover:to-violet-600 transition-all duration-300 shadow-lg shadow-rose-500/25"
+                  disabled={isLoading}
+                  className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-rose-500 via-pink-500 to-violet-500 hover:from-rose-600 hover:via-pink-600 hover:to-violet-600 transition-all duration-300 shadow-lg shadow-rose-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Sign In
+                  {isLoading ? "Signing in..." : "Sign In"}
                 </button>
               </form>
 
-              {/* Divider */}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-white/10"></div>
@@ -247,34 +274,19 @@ export function Login() {
                 </div>
               </div>
 
-              {/* Google Login */}
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                className="w-full py-3 rounded-lg font-medium text-white border border-white/10 hover:bg-white/5 transition-all duration-300 flex items-center justify-center gap-3"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-                Sign in with Google
-              </button>
+              <div className="flex justify-center w-full">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  theme="filled_black"
+                  size="large"
+                  width={350}
+                  text="signin_with"
+                  shape="rectangular"
+                  logo_alignment="left"
+                />
+              </div>
 
-              {/* Sign Up Link */}
               <p className="text-center text-sm text-white/60 mt-6">
                 Don't have an account?{" "}
                 <Link
@@ -286,7 +298,6 @@ export function Login() {
               </p>
             </div>
 
-            {/* Decorative Glow */}
             <div
               className="absolute -inset-1 bg-gradient-to-r from-rose-500/20 via-pink-500/20 to-violet-500/20 rounded-2xl blur-xl -z-10"
               style={{ opacity: 0.5 }}
