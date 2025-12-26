@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
-import connectDB from "./db/index.js"
+import connectDB from "./src/db/index.js"
 
 // Load environment variables
 dotenv.config();
