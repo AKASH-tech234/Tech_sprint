@@ -4,7 +4,6 @@ import {
   FeaturesSection,
   HowItWorksSection,
   CardsSection,
-  ImpactSection,
   CTASection,
   Footer,
 } from "../components/landing";
