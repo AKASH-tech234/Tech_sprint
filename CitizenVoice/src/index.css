@@ -1,1 +1,157 @@
 @import "tailwindcss";
+
+/* Custom CSS for CitizenVoice Landing Page - Web3 Rose/Violet Theme */
+
+/* CSS Custom Properties for Gradient Animations */
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@property --gradient-color-1 {
+  syntax: "<color>";
+  initial-value: #f43f5e;
+  inherits: false;
+}
+
+@property --gradient-color-2 {
+  syntax: "<color>";
+  initial-value: #ec4899;
+  inherits: false;
+}
+
+@property --gradient-color-3 {
+  syntax: "<color>";
+  initial-value: #8b5cf6;
+  inherits: false;
+}
+
+@property --gradient-color-4 {
+  syntax: "<color>";
+  initial-value: #6366f1;
+  inherits: false;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0a0a0a;
+}
+
+/* Premium heading font */
+.font-display {
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+/* Gradient Button Styles - Web3 Theme */
+.gradient-button {
+  position: relative;
+  background: linear-gradient(
+    var(--gradient-angle),
+    var(--gradient-color-1),
+    var(--gradient-color-2),
+    var(--gradient-color-3),
+    var(--gradient-color-4)
+  );
+  animation: rotateGradient 4s linear infinite;
+  transition: --gradient-color-1 0.3s, --gradient-color-2 0.3s,
+    --gradient-color-3 0.3s, --gradient-color-4 0.3s;
+}
+
+.gradient-button:hover {
+  --gradient-color-1: #fb7185;
+  --gradient-color-2: #f472b6;
+  --gradient-color-3: #a78bfa;
+  --gradient-color-4: #818cf8;
+}
+
+.gradient-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    var(--gradient-angle),
+    var(--gradient-color-1),
+    var(--gradient-color-2),
+    var(--gradient-color-3),
+    var(--gradient-color-4)
+  );
+  filter: blur(20px);
+  opacity: 0.5;
+  z-index: -1;
+  animation: rotateGradient 4s linear infinite;
+}
+
+@keyframes rotateGradient {
+  0% {
+    --gradient-angle: 0deg;
+  }
+  100% {
+    --gradient-angle: 360deg;
+  }
+}
+
+/* Secondary gradient variant */
+.gradient-button-secondary {
+  background: linear-gradient(
+    var(--gradient-angle),
+    rgba(244, 63, 94, 0.2),
+    rgba(236, 72, 153, 0.2),
+    rgba(139, 92, 246, 0.2),
+    rgba(99, 102, 241, 0.2)
+  );
+  border: 1px solid rgba(244, 63, 94, 0.5);
+  animation: rotateGradient 4s linear infinite;
+}
+
+.gradient-button-secondary:hover {
+  background: linear-gradient(
+    var(--gradient-angle),
+    rgba(244, 63, 94, 0.4),
+    rgba(236, 72, 153, 0.4),
+    rgba(139, 92, 246, 0.4),
+    rgba(99, 102, 241, 0.4)
+  );
+}
+
+/* Custom scrollbar - Dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Perspective for 3D transforms */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+/* Selection colors - Rose/Violet theme */
+::selection {
+  background-color: rgba(244, 63, 94, 0.3);
+  color: white;
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid rgba(244, 63, 94, 0.5);
+  outline-offset: 2px;
+}
