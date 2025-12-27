@@ -21,6 +21,7 @@ export function DashboardLayout({ children, role = "citizen" }) {
         <Header
           onMenuClick={() => setSidebarOpen(true)}
           showMenuButton={true}
+          role={role}
         />
 
         {/* Page content */}

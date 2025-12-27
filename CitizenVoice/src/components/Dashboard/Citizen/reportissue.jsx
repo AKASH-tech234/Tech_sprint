@@ -1,5 +1,5 @@
 // src/components/Dashboard/Citizen/ReportIssue.jsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../ui/button";
 import {
@@ -11,8 +11,27 @@ import {
   CheckCircle2,
   AlertTriangle,
   Image as ImageIcon,
+  Trash2,
 } from "lucide-react";
 import { issueService } from "../../../services/issueService";
+
+/**
+ * BACKEND API ENDPOINTS REQUIRED:
+ * 
+ * 1. POST /api/issues/create
+ *    - Accepts: FormData with fields: title, description, category, priority, location (JSON), images (files)
+ *    - Returns: { success: true, issue: {...}, message: "Issue created successfully" }
+ * 
+ * 2. POST /api/geocoding/reverse
+ *    - Accepts: { lat: number, lng: number }
+ *    - Returns: { address: string, city: string, state: string }
+ *    - Used to convert GPS coordinates to human-readable address
+ * 
+ * 3. POST /api/uploads/images
+ *    - Accepts: FormData with image files
+ *    - Returns: { urls: string[] }
+ *    - Optional: For separate image upload before issue creation
+ */
 
 const categories = [
   { value: "pothole", label: "Pothole", icon: "🕳️" },
@@ -41,14 +60,25 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
       address: "",
       lat: null,
       lng: null,
+      city: "",
+      state: ""
     },
   });
   const [images, setImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
+
+  // Auto-detect location on mount
+  useEffect(() => {
+    if (isOpen && !formData.location.lat) {
+      getCurrentLocation();
+    }
+  }, [isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -65,37 +95,68 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+    
+    // Validation
     if (files.length + images.length > 5) {
       setError("Maximum 5 images allowed");
+      setTimeout(() => setError(null), 3000);
       return;
     }
 
-    const newImages = files.map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-    setImages((prev) => [...prev, ...newImages]);
+    // Validate file types
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+    if (invalidFiles.length > 0) {
+      setError("Only JPEG, PNG, WebP, and GIF images are allowed");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    // Validate file sizes (max 5MB each)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const oversizedFiles = files.filter(file => file.size > maxSize);
+    if (oversizedFiles.length > 0) {
+      setError("Each image must be less than 5MB");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    // Create previews
+    const newPreviews = [];
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push(reader.result);
+        if (newPreviews.length === files.length) {
+          setImagePreviews((prev) => [...prev, ...newPreviews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    setImages((prev) => [...prev, ...files]);
   };
 
   const removeImage = (index) => {
-    setImages((prev) => {
-      const updated = [...prev];
-      URL.revokeObjectURL(updated[index].preview);
-      updated.splice(index, 1);
-      return updated;
-    });
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
+      setTimeout(() => setError(null), 3000);
       return;
     }
 
     setGettingLocation(true);
+    setError(null);
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const { latitude, longitude } = position.coords;
+        const { latitude, longitude, accuracy } = position.coords;
+        
+        // Update coordinates immediately
         setFormData((prev) => ({
           ...prev,
           location: {
@@ -105,20 +166,77 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
           },
         }));
 
-        // Reverse geocoding - mock for now
-        // TODO: Integrate with actual geocoding API
-        setFormData((prev) => ({
-          ...prev,
-          location: {
-            ...prev.location,
-            address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-          },
-        }));
+        // Reverse geocoding to get address
+        try {
+          /**
+           * BACKEND API CALL: Reverse Geocoding
+           * Endpoint: POST /api/geocoding/reverse
+           * Body: { lat: latitude, lng: longitude }
+           * Response: { address: string, city: string, state: string, country: string }
+           */
+          
+          // Uncomment when backend is ready:
+          // const response = await fetch('/api/geocoding/reverse', {
+          //   method: 'POST',
+          //   headers: { 'Content-Type': 'application/json' },
+          //   credentials: 'include',
+          //   body: JSON.stringify({ lat: latitude, lng: longitude })
+          // });
+          // const data = await response.json();
+          
+          // Mock response for now
+          const mockAddress = `${latitude.toFixed(6)}°N, ${longitude.toFixed(6)}°E`;
+          const mockCity = "Your City";
+          const mockState = "Your State";
+          
+          setFormData((prev) => ({
+            ...prev,
+            location: {
+              ...prev.location,
+              address: mockAddress,
+              city: mockCity,
+              state: mockState,
+            },
+          }));
+
+          console.log(`Location acquired with accuracy: ${accuracy.toFixed(0)}m`);
+        } catch (err) {
+          console.error("Reverse geocoding failed:", err);
+          // Fallback to coordinates
+          setFormData((prev) => ({
+            ...prev,
+            location: {
+              ...prev.location,
+              address: `${latitude.toFixed(6)}°N, ${longitude.toFixed(6)}°E`,
+            },
+          }));
+        }
+        
         setGettingLocation(false);
       },
-      () => {
-        setError("Unable to get your location. Please enter manually.");
+      (error) => {
+        let errorMessage = "Unable to get your location. ";
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage += "Please enable location permissions.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage += "Location information unavailable.";
+            break;
+          case error.TIMEOUT:
+            errorMessage += "Location request timed out.";
+            break;
+          default:
+            errorMessage += "Please enter manually.";
+        }
+        setError(errorMessage);
+        setTimeout(() => setError(null), 5000);
         setGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   };
@@ -140,17 +258,79 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
       setError("Please describe the issue");
       return;
     }
+    if (!formData.location.lat || !formData.location.lng) {
+      setError("Please provide a location using GPS or enter manually");
+      return;
+    }
 
     setLoading(true);
+    setUploadProgress(0);
 
     try {
-      const submitData = {
+      /**
+       * BACKEND API CALL: Create Issue
+       * Endpoint: POST /api/issues/create
+       * Content-Type: multipart/form-data
+       * 
+       * FormData fields:
+       * - title: string
+       * - description: string
+       * - category: string
+       * - priority: string
+       * - location: JSON string { address, lat, lng, city, state }
+       * - images: File[] (array of image files)
+       */
+
+      // Prepare FormData for multipart upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('priority', formData.priority);
+      formDataToSend.append('location', JSON.stringify(formData.location));
+      
+      // Append images
+      images.forEach((image, index) => {
+        formDataToSend.append('images', image);
+      });
+
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      // Call backend API
+      const result = await issueService.createIssue(formDataToSend);
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      setSuccess(true);
+
+      // Store the new issue in localStorage temporarily (for immediate display)
+      const newIssue = {
+        id: result.issue?.id || `ISS-${Date.now()}`,
         ...formData,
-        images: images.map((img) => img.file),
+        images: imagePreviews,
+        upvotes: 0,
+        comments: [],
+        status: 'reported',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
-      await issueService.createIssue(submitData);
-      setSuccess(true);
+      // Save to localStorage for immediate reflection
+      const existingIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
+      localStorage.setItem('userIssues', JSON.stringify([newIssue, ...existingIssues]));
+
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new CustomEvent('issueCreated', { detail: newIssue }));
+      console.log("✅ Issue saved and event dispatched:", newIssue.id);
 
       // Reset form after short delay
       setTimeout(() => {
@@ -159,15 +339,19 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
           description: "",
           category: "",
           priority: "medium",
-          location: { address: "", lat: null, lng: null },
+          location: { address: "", lat: null, lng: null, city: "", state: "" },
         });
         setImages([]);
+        setImagePreviews([]);
         setSuccess(false);
-        onSuccess?.();
+        setUploadProgress(0);
+        onSuccess?.(newIssue);
         onClose?.();
       }, 2000);
     } catch (err) {
+      console.error("Issue creation error:", err);
       setError(err.message || "Failed to submit issue. Please try again.");
+      setUploadProgress(0);
     } finally {
       setLoading(false);
     }
@@ -177,9 +361,9 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]">
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 p-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 p-4">
           <h2 className="text-xl font-semibold text-white">Report an Issue</h2>
           <button
             onClick={onClose}
@@ -204,7 +388,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="overflow-y-auto p-4">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6" style={{ maxHeight: 'calc(90vh - 80px)' }}>
             {/* Error message */}
             {error && (
               <div className="mb-4 flex items-center gap-2 rounded-lg bg-rose-500/20 p-3 text-sm text-rose-400">
@@ -219,40 +403,48 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
                 Photos (Optional, max 5)
               </label>
               <div className="flex flex-wrap gap-3">
-                {images.map((img, index) => (
+                {imagePreviews.map((preview, index) => (
                   <div
                     key={index}
                     className="group relative h-24 w-24 overflow-hidden rounded-lg border border-white/10"
                   >
                     <img
-                      src={img.preview}
+                      src={preview}
                       alt={`Upload ${index + 1}`}
                       className="h-full w-full object-cover"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="absolute right-1 top-1 rounded-full bg-black/60 p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                      className="absolute right-1 top-1 rounded-full bg-rose-500/90 p-1.5 opacity-0 transition-opacity hover:bg-rose-600 group-hover:opacity-100"
                     >
-                      <X className="h-3 w-3 text-white" />
+                      <Trash2 className="h-3 w-3 text-white" />
                     </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+                      <span className="text-[10px] text-white/80">
+                        {(images[index]?.size / 1024).toFixed(0)} KB
+                      </span>
+                    </div>
                   </div>
                 ))}
                 {images.length < 5 && (
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border border-dashed border-white/20 text-white/40 transition-colors hover:border-rose-500/50 hover:text-rose-400"
+                    className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border border-dashed border-white/20 text-white/40 transition-colors hover:border-rose-500/50 hover:bg-rose-500/5 hover:text-rose-400"
                   >
                     <Camera className="mb-1 h-6 w-6" />
                     <span className="text-xs">Add Photo</span>
                   </button>
                 )}
               </div>
+              <p className="mt-2 text-xs text-white/40">
+                Supports: JPEG, PNG, WebP, GIF • Max 5MB each
+              </p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                 multiple
                 onChange={handleImageUpload}
                 className="hidden"
@@ -327,12 +519,14 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
 
-            {/* Location */}
+            {/* Location with GPS Coordinates */}
             <div className="mb-4">
               <label className="mb-2 block text-sm font-medium text-white">
-                Location
+                Location *
               </label>
-              <div className="flex gap-2">
+              
+              {/* Address Input with GPS Button */}
+              <div className="mb-3 flex gap-2">
                 <input
                   type="text"
                   name="location.address"
@@ -340,13 +534,15 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
                   onChange={handleInputChange}
                   placeholder="Enter address or use GPS"
                   className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/40 outline-none transition-colors focus:border-rose-500/50"
+                  readOnly={gettingLocation}
                 />
                 <Button
                   type="button"
                   variant="outline"
                   onClick={getCurrentLocation}
                   disabled={gettingLocation}
-                  className="px-4"
+                  className="shrink-0 px-4"
+                  title="Get current location"
                 >
                   {gettingLocation ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -355,6 +551,113 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
                   )}
                 </Button>
               </div>
+
+              {/* GPS Coordinates Display & Manual Input */}
+              {formData.location.lat && formData.location.lng ? (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-medium text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    GPS Location Captured
+                  </div>
+                  
+                  {/* Coordinate Inputs */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs text-white/60">Latitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={formData.location.lat}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          location: { ...prev.location, lat: parseFloat(e.target.value) }
+                        }))}
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-emerald-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-white/60">Longitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={formData.location.lng}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          location: { ...prev.location, lng: parseFloat(e.target.value) }
+                        }))}
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-emerald-500/50"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Map Preview Placeholder */}
+                  <div className="mt-3 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                    <div className="relative aspect-video w-full bg-gradient-to-br from-emerald-500/20 to-violet-500/20">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <MapPin className="mb-2 h-8 w-8 text-emerald-400" />
+                        <p className="text-xs text-white/60">Map Preview</p>
+                        <p className="text-xs text-white/40">
+                          {formData.location.lat.toFixed(6)}, {formData.location.lng.toFixed(6)}
+                        </p>
+                      </div>
+                      {/* This is where Google Maps or Leaflet map would be embedded */}
+                      {/* <iframe 
+                        src={`https://maps.google.com/maps?q=${formData.location.lat},${formData.location.lng}&z=15&output=embed`}
+                        className="h-full w-full"
+                        frameBorder="0"
+                      /> */}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-white/20 bg-white/5 p-4 text-center">
+                  <MapPin className="mx-auto mb-2 h-6 w-6 text-white/40" />
+                  <p className="text-sm text-white/60">
+                    Click the GPS button to capture your location
+                  </p>
+                  <p className="mt-1 text-xs text-white/40">
+                    Or enter coordinates manually below
+                  </p>
+                  
+                  {/* Manual Coordinate Entry */}
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        placeholder="Latitude"
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val)) {
+                            setFormData(prev => ({
+                              ...prev,
+                              location: { ...prev.location, lat: val }
+                            }));
+                          }
+                        }}
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/40 outline-none transition-colors focus:border-rose-500/50"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        placeholder="Longitude"
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val)) {
+                            setFormData(prev => ({
+                              ...prev,
+                              location: { ...prev.location, lng: val }
+                            }));
+                          }
+                        }}
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/40 outline-none transition-colors focus:border-rose-500/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -372,6 +675,22 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
               />
             </div>
 
+            {/* Upload Progress */}
+            {loading && uploadProgress > 0 && (
+              <div className="mb-4">
+                <div className="mb-2 flex items-center justify-between text-xs text-white/60">
+                  <span>Uploading...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full bg-gradient-to-r from-rose-500 to-violet-500 transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Submit button */}
             <div className="flex gap-3">
               <Button
@@ -379,13 +698,14 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
                 variant="outline"
                 onClick={onClose}
                 className="flex-1"
+                disabled={loading}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={loading}
-                className="flex-1 bg-gradient-to-r from-rose-500 to-violet-500 text-white hover:from-rose-600 hover:to-violet-600"
+                disabled={loading || gettingLocation}
+                className="flex-1 bg-gradient-to-r from-rose-500 to-violet-500 text-white hover:from-rose-600 hover:to-violet-600 disabled:opacity-50"
               >
                 {loading ? (
                   <>

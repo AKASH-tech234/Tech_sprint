@@ -296,6 +296,9 @@ export function HowItWorksSection() {
             </motion.div>
             );
           })}
+
+
+
         </motion.div>
 
         {/* Key Features Grid */}

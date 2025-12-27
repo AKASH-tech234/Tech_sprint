@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   XCircle,
   Eye,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
 
 // Status configuration
@@ -80,8 +82,11 @@ export function IssueCard({
   variant = "default",
   onView,
   onUpvote,
+  onDelete,
+  showActions = false,
   className,
 }) {
+  const [showMenu, setShowMenu] = React.useState(false);
   const status = statusConfig[issue.status] || statusConfig.reported;
   const priority = priorityConfig[issue.priority] || priorityConfig.medium;
   const StatusIcon = status.icon;
@@ -222,6 +227,7 @@ export function IssueCard({
                 onUpvote?.(issue.id);
               }}
               className="flex items-center gap-1 text-sm text-white/60 transition-colors hover:text-rose-400"
+              title="Upvote this issue"
             >
               <ThumbsUp className="h-4 w-4" />
               <span>{issue.upvotes || 0}</span>
@@ -231,13 +237,53 @@ export function IssueCard({
               <span>{issue.comments?.length || 0}</span>
             </span>
           </div>
-          <button
-            onClick={() => onView?.(issue)}
-            className="flex items-center gap-1 text-sm text-rose-400 transition-colors hover:text-rose-300"
-          >
-            View Details
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onView?.(issue)}
+              className="flex items-center gap-1 text-sm text-rose-400 transition-colors hover:text-rose-300"
+            >
+              View Details
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            
+            {showActions && onDelete && (
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(!showMenu);
+                  }}
+                  className="rounded-lg p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+                  title="More actions"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+                
+                {showMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setShowMenu(false)}
+                    />
+                    <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-lg border border-white/10 bg-black/95 shadow-xl backdrop-blur-xl">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowMenu(false);
+                          onDelete?.(issue.id);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-rose-400 transition-colors hover:bg-rose-500/20"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Issue
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

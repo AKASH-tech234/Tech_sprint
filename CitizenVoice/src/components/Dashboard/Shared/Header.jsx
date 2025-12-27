@@ -1,5 +1,6 @@
 // src/components/Dashboard/Shared/Header.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { cn } from "../../../lib/utils";
 import {
@@ -11,13 +12,30 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  Sun,
+  Moon,
 } from "lucide-react";
 
-export function Header({ onMenuClick, showMenuButton = false }) {
+export function Header({ onMenuClick, showMenuButton = false, role = "citizen" }) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('dashboardTheme') === 'dark';
+  });
+
+  // Apply theme to body
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('dashboardTheme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('dashboardTheme', 'light');
+    }
+  }, [darkMode]);
 
   // Mock notifications - will be replaced with API data
   const notifications = [
@@ -85,11 +103,24 @@ export function Header({ onMenuClick, showMenuButton = false }) {
         </form>
       </div>
 
-      {/* Right section - Notifications & Profile */}
+      {/* Right section - Dark Mode, Notifications & Profile */}
       <div className="flex items-center gap-2">
         {/* Mobile search button */}
         <button className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white md:hidden">
           <Search className="h-5 w-5" />
+        </button>
+
+        {/* Dark/Light Mode Toggle */}
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+          title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {darkMode ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
         </button>
 
         {/* Notifications */}
@@ -100,6 +131,7 @@ export function Header({ onMenuClick, showMenuButton = false }) {
               setShowProfile(false);
             }}
             className="relative rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+            title="Notifications"
           >
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
@@ -144,7 +176,13 @@ export function Header({ onMenuClick, showMenuButton = false }) {
                   </div>
                 ))}
               </div>
-              <button className="mt-3 w-full rounded-lg bg-white/5 py-2 text-sm text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+              <button 
+                onClick={() => {
+                  setShowNotifications(false);
+                  navigate(`/dashboard/${role}/notifications`);
+                }}
+                className="mt-3 w-full rounded-lg bg-white/5 py-2 text-sm text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              >
                 View all notifications
               </button>
             </div>
@@ -184,11 +222,23 @@ export function Header({ onMenuClick, showMenuButton = false }) {
                 </span>
               </div>
               <div className="py-2">
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+                <button 
+                  onClick={() => {
+                    setShowProfile(false);
+                    navigate(`/dashboard/${role}/profile`);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                >
                   <User className="h-4 w-4" />
                   Profile
                 </button>
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+                <button 
+                  onClick={() => {
+                    setShowProfile(false);
+                    navigate(`/dashboard/${role}/settings`);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                >
                   <Settings className="h-4 w-4" />
                   Settings
                 </button>

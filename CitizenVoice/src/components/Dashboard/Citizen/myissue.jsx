@@ -111,28 +111,53 @@ export function MyIssues({ onViewIssue }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const fetchIssues = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // TODO: Replace with actual API call
-      // const filters = {};
-      // if (statusFilter !== "all") filters.status = statusFilter;
-      // if (categoryFilter !== "all") filters.category = categoryFilter;
-      // const data = await issueService.getMyIssues(filters);
+      /**
+       * BACKEND API CALL: Get User's Issues
+       * Endpoint: GET /api/issues/my-issues?status={status}&category={category}
+       * Headers: Authorization: Bearer {token} or use cookies
+       * Response: { success: true, issues: [...], total: number }
+       */
+      
+      // Uncomment when backend is ready:
+      // const params = new URLSearchParams();
+      // if (statusFilter !== "all") params.append("status", statusFilter);
+      // if (categoryFilter !== "all") params.append("category", categoryFilter);
+      // const data = await issueService.getMyIssues(params.toString());
       // setIssues(data.issues);
 
-      // Using mock data for now
+      // Fetch from localStorage + mock data for now
       await new Promise((resolve) => setTimeout(resolve, 500));
-      let filtered = [...mockIssues];
+      
+      // Get user-created issues from localStorage
+      const userIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
+      
+      // Combine with mock data
+      let allIssues = [...userIssues, ...mockIssues];
+      
+      // Remove duplicates by ID
+      allIssues = allIssues.filter((issue, index, self) =>
+        index === self.findIndex((i) => i.id === issue.id)
+      );
+      
+      // Apply filters
+      let filtered = allIssues;
       if (statusFilter !== "all") {
         filtered = filtered.filter((i) => i.status === statusFilter);
       }
       if (categoryFilter !== "all") {
         filtered = filtered.filter((i) => i.category === categoryFilter);
       }
+      
+      // Sort by creation date (newest first)
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
       setIssues(filtered);
     } catch (err) {
       setError(err.message || "Failed to fetch issues");
@@ -143,12 +168,38 @@ export function MyIssues({ onViewIssue }) {
 
   useEffect(() => {
     fetchIssues();
-  }, [fetchIssues]);
+  }, [fetchIssues, refreshTrigger]);
+
+  // Listen for storage changes (when issue is created from another component)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      console.log("Storage changed, refreshing issues...");
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Custom event for same-tab updates
+    window.addEventListener('issueCreated', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('issueCreated', handleStorageChange);
+    };
+  }, []);
 
   const handleUpvote = async (issueId) => {
     try {
-      // TODO: Call API
+      /**
+       * BACKEND API CALL: Upvote Issue
+       * Endpoint: POST /api/issues/{issueId}/upvote
+       * Returns: { success: true, upvotes: number }
+       */
+      
+      // Uncomment when backend is ready:
       // await issueService.upvoteIssue(issueId);
+      
+      // Update local state
       setIssues((prev) =>
         prev.map((issue) =>
           issue.id === issueId
@@ -156,8 +207,43 @@ export function MyIssues({ onViewIssue }) {
             : issue
         )
       );
+      
+      // Update localStorage if it's a user issue
+      const userIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
+      const updatedUserIssues = userIssues.map((issue) =>
+        issue.id === issueId
+          ? { ...issue, upvotes: issue.upvotes + 1 }
+          : issue
+      );
+      localStorage.setItem('userIssues', JSON.stringify(updatedUserIssues));
     } catch (err) {
       console.error("Failed to upvote:", err);
+    }
+  };
+
+  const handleDeleteIssue = async (issueId) => {
+    if (!confirm("Are you sure you want to delete this issue?")) return;
+    
+    try {
+      /**
+       * BACKEND API CALL: Delete Issue
+       * Endpoint: DELETE /api/issues/{issueId}
+       * Returns: { success: true, message: "Issue deleted" }
+       */
+      
+      // Uncomment when backend is ready:
+      // await issueService.deleteIssue(issueId);
+      
+      // Remove from local state
+      setIssues((prev) => prev.filter((issue) => issue.id !== issueId));
+      
+      // Remove from localStorage
+      const userIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
+      const updatedUserIssues = userIssues.filter((issue) => issue.id !== issueId);
+      localStorage.setItem('userIssues', JSON.stringify(updatedUserIssues));
+    } catch (err) {
+      console.error("Failed to delete issue:", err);
+      setError("Failed to delete issue. Please try again.");
     }
   };
 
@@ -341,6 +427,8 @@ export function MyIssues({ onViewIssue }) {
               variant={viewMode === "list" ? "compact" : "default"}
               onView={onViewIssue}
               onUpvote={handleUpvote}
+              onDelete={handleDeleteIssue}
+              showActions={true}
             />
           ))}
         </div>

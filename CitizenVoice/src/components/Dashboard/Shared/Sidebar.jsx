@@ -110,12 +110,31 @@ export function Sidebar({ isOpen, onClose, role = "citizen" }) {
       >
         {/* Logo section */}
         <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-violet-500">
-              <span className="text-lg font-bold text-white">CV</span>
+          <div className="flex items-center gap-3">
+            {/* Octagon Logo from Landing Page */}
+            <div className="relative h-8 w-8">
+              <svg
+                viewBox="0 0 100 100"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-full w-auto"
+              >
+                <polygon
+                  points="30,5 70,5 95,30 95,70 70,95 30,95 5,70 5,30"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="4"
+                />
+                <polygon
+                  points="35,18 65,18 82,35 82,65 65,82 35,82 18,65 18,35"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="3"
+                />
+              </svg>
             </div>
-            <span className="font-display text-lg font-semibold text-white">
-              CitizenVoice
+            <span className="text-sm font-bold tracking-widest text-white uppercase" style={{ letterSpacing: "0.1em" }}>
+              CITIZEN VOICE
             </span>
           </div>
           <button
