@@ -295,6 +295,20 @@ class IssueService {
 
     return response.json();
   }
+
+  // Get all issues for heatmap (with filtering)
+  async getAllIssues(filters = {}) {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(`${API_BASE_URL}/issues/all?${params}`, {
+      headers: getAuthHeader(),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch all issues");
+    }
+
+    return response.json();
+  }
 }
 
 export const issueService = new IssueService();

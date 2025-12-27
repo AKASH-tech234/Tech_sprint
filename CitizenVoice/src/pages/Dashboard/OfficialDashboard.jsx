@@ -6,6 +6,7 @@ import { StatsCard } from "../../components/Dashboard/Shared/StatsCard";
 import { IssueManagement } from "../../components/Dashboard/Official/issuemanagment";
 import { TeamManagement } from "../../components/Dashboard/Official/Teammanagement";
 import { Analytics } from "../../components/Dashboard/Official/Analytics";
+import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import {
   Inbox,
   Users,
@@ -275,16 +276,22 @@ function DashboardHome() {
 function MapPage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-white">Area Map</h1>
-      <div className="flex h-[500px] items-center justify-center rounded-xl border border-white/10 bg-white/5">
-        <div className="text-center">
-          <MapPin className="mx-auto mb-2 h-16 w-16 text-white/20" />
-          <p className="text-lg text-white/40">Area Map View</p>
-          <p className="text-sm text-white/20">
-            Integration with Leaflet/Mapbox coming soon
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">
+            Official Area Management Map
+          </h1>
+          <p className="text-sm text-white/60">
+            Monitor and manage issues across your jurisdiction
           </p>
         </div>
       </div>
+      <HeatmapViewer 
+        userRole="official" 
+        defaultCenter={[28.6139, 77.2090]}
+        defaultZoom={12}
+        height="calc(100vh - 250px)"
+      />
     </div>
   );
 }
@@ -345,6 +352,7 @@ export default function OfficialDashboard() {
         <Route path="team" element={<TeamManagement />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="map" element={<MapPage />} />
+        <Route path="heatmap" element={<MapPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Routes>
     </DashboardLayout>

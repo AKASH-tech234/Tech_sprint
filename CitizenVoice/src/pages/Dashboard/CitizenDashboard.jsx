@@ -9,6 +9,7 @@ import { MyIssues } from "../../components/Dashboard/Citizen/myissue";
 import { ReportIssue } from "../../components/Dashboard/Citizen/reportissue";
 import { IssueMap } from "../../components/Dashboard/Citizen/IssueMap";
 import { NearbyIssuesMap } from "../../components/Dashboard/Shared/NearbyIssuesMap";
+import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import {
   FileText,
   Clock,
@@ -263,6 +264,7 @@ export default function CitizenDashboard() {
         <Route path="issues" element={<MyIssues />} />
         <Route path="report" element={<ReportIssuePage />} />
         <Route path="map" element={<MapPage />} />
+        <Route path="heatmap" element={<HeatmapPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
@@ -294,6 +296,29 @@ function ReportIssuePage() {
 
 function MapPage() {
   return <IssueMap />;
+}
+
+function HeatmapPage() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">
+            Issues Heatmap
+          </h1>
+          <p className="text-sm text-white/60">
+            Visualize issue density in your area
+          </p>
+        </div>
+      </div>
+      <HeatmapViewer 
+        userRole="citizen" 
+        defaultCenter={[28.6139, 77.2090]}
+        defaultZoom={12}
+        height="calc(100vh - 250px)"
+      />
+    </div>
+  );
 }
 
 function NotificationsPage() {

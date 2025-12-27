@@ -6,6 +6,7 @@ import { StatsCard } from "../../components/Dashboard/Shared/StatsCard";
 import { AreaIssues } from "../../components/Dashboard/Community/areaissue";
 import { VerificationPanel } from "../../components/Dashboard/Community/verificationpanel";
 import { CommunityStats } from "../../components/Dashboard/Community/communitystats";
+import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import {
   FileText,
   CheckCircle2,
@@ -304,16 +305,22 @@ function DashboardHome() {
 function MapPage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-white">Public Map</h1>
-      <div className="flex h-[500px] items-center justify-center rounded-xl border border-white/10 bg-white/5">
-        <div className="text-center">
-          <MapPin className="mx-auto mb-2 h-16 w-16 text-white/20" />
-          <p className="text-lg text-white/40">Community Issues Map</p>
-          <p className="text-sm text-white/20">
-            Integration with Leaflet/Mapbox coming soon
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">
+            Community Issues Heatmap
+          </h1>
+          <p className="text-sm text-white/60">
+            Track and monitor issues across your community
           </p>
         </div>
       </div>
+      <HeatmapViewer 
+        userRole="community" 
+        defaultCenter={[28.6139, 77.2090]}
+        defaultZoom={12}
+        height="calc(100vh - 250px)"
+      />
     </div>
   );
 }
@@ -408,6 +415,7 @@ export default function CommunityDashboard() {
         <Route path="verify" element={<VerificationPanel />} />
         <Route path="stats" element={<CommunityStats />} />
         <Route path="map" element={<MapPage />} />
+        <Route path="heatmap" element={<MapPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Routes>
     </DashboardLayout>
