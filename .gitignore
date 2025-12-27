@@ -8,3 +8,7 @@ Backend/.env.*
 node_modules/
 Backend/node_modules/
 CitizenVoice/node_modules/
+uploads/
+*.jpg
+*.png
+*.jpeg

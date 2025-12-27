@@ -50,15 +50,6 @@ app.get("/", (req, res) => {
 
 // Routes
 app.use("/api/auth", authRoutes);
-import { uploadIssueImages } from "./src/middleware/uploadMiddleware.js";
-app.post('/test-upload', uploadIssueImages, (req, res) => {
-  console.log("FILES =>", req.files)
-  console.log("BODY =>", req.body)
-  res.status(200).json({
-    success: true,
-    files: req.files
-  })
-})
 
 
 // Global error handler
