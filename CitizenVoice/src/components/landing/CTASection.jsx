@@ -68,12 +68,7 @@ export function CTASection() {
                 Start Reporting Now
                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Link>
-              <a
-                href="#demo"
-                className="inline-flex items-center gap-2 rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur transition-all hover:bg-white/20"
-              >
-                Schedule Demo
-              </a>
+             
             </div>
 
             {/* Trust Badge */}
