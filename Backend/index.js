@@ -1,13 +1,36 @@
 // Backend/index.js (Updated)
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Get directory name for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables - specify path explicitly
+dotenv.config({ path: path.join(__dirname, ".env") });
+
+console.log("🔧 [Backend] Environment loaded:");
+console.log("  - PORT:", process.env.PORT);
+console.log("  - NODE_ENV:", process.env.NODE_ENV);
+console.log(
+  "  - MONGODB_URI:",
+  process.env.MONGODB_URI ? "Set ✅" : "NOT SET ❌"
+);
+console.log(
+  "  - JWT_SECRET:",
+  process.env.JWT_SECRET ? "Set ✅" : "NOT SET ❌"
+);
+console.log(
+  "  - GOOGLE_CLIENT_ID:",
+  process.env.GOOGLE_CLIENT_ID ? "Set ✅" : "NOT SET ❌"
+);
+
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import connectDB from "./src/db/index.js";
 import authRoutes from "./src/routes/authRoutes.js";
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 

@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 // DEV MODE: Set to true to bypass auth check during development
-const DEV_BYPASS_AUTH = true;
+const DEV_BYPASS_AUTH = false;
 
 // Mock user for development testing
 const DEV_MOCK_USER = {

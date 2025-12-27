@@ -63,8 +63,14 @@ export function SignUp() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("📝 [SignUp Page] Form submitted:", {
+      username: formData.username,
+      email: formData.email,
+      role: selectedRole,
+    });
 
     if (!selectedRole) {
+      console.log("❌ [SignUp Page] No role selected");
       setError("Please select a role");
       return;
     }
@@ -78,11 +84,14 @@ export function SignUp() {
       formData.password,
       selectedRole
     );
+    console.log("📋 [SignUp Page] Signup result:", result);
 
     if (result.success) {
       const dashboardPath = `/dashboard/${result.user.role}`;
+      console.log("✅ [SignUp Page] Redirecting to:", dashboardPath);
       navigate(dashboardPath, { replace: true });
     } else {
+      console.log("❌ [SignUp Page] Signup failed:", result.error);
       setError(result.error || "Signup failed. Please try again.");
     }
 
@@ -90,7 +99,9 @@ export function SignUp() {
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
+    console.log("🔷 [SignUp Page] Google signup success, credential received");
     if (!selectedRole) {
+      console.log("❌ [SignUp Page] No role selected for Google signup");
       setError("Please select a role first");
       return;
     }
@@ -102,11 +113,14 @@ export function SignUp() {
       credentialResponse.credential,
       selectedRole
     );
+    console.log("📋 [SignUp Page] Google auth result:", result);
 
     if (result.success) {
       const dashboardPath = `/dashboard/${result.user.role}`;
+      console.log("✅ [SignUp Page] Redirecting to:", dashboardPath);
       navigate(dashboardPath, { replace: true });
     } else {
+      console.log("❌ [SignUp Page] Google signup failed:", result.error);
       setError(result.error || "Google signup failed. Please try again.");
     }
 
@@ -114,6 +128,7 @@ export function SignUp() {
   };
 
   const handleGoogleError = () => {
+    console.log("❌ [SignUp Page] Google sign-in error/cancelled");
     setError("Google sign-in was cancelled or failed. Please try again.");
   };
 

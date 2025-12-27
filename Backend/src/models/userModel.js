@@ -80,9 +80,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for better query performance
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
+// Index for role queries (email and username already indexed via unique: true)
 userSchema.index({ role: 1 });
 
 export const User = mongoose.model("User", userSchema);

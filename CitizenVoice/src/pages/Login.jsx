@@ -26,16 +26,20 @@ export function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("🔐 [Login Page] Form submitted:", { email: formData.email });
     setIsLoading(true);
     setError("");
 
     const result = await login(formData.email, formData.password);
+    console.log("📋 [Login Page] Login result:", result);
 
     if (result.success) {
       // Redirect based on role
       const dashboardPath = `/dashboard/${result.user.role}`;
+      console.log("✅ [Login Page] Redirecting to:", dashboardPath);
       navigate(dashboardPath, { replace: true });
     } else {
+      console.log("❌ [Login Page] Login failed:", result.error);
       setError(result.error || "Login failed. Please try again.");
     }
 
@@ -43,17 +47,21 @@ export function Login() {
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
+    console.log("🔷 [Login Page] Google login success, credential received");
     setIsLoading(true);
     setError("");
 
     // For login, we'll use "citizen" as default role
     // Users can change their role from settings if needed
     const result = await googleAuth(credentialResponse.credential, "citizen");
+    console.log("📋 [Login Page] Google auth result:", result);
 
     if (result.success) {
       const dashboardPath = `/dashboard/${result.user.role}`;
+      console.log("✅ [Login Page] Redirecting to:", dashboardPath);
       navigate(dashboardPath, { replace: true });
     } else {
+      console.log("❌ [Login Page] Google login failed:", result.error);
       setError(result.error || "Google login failed. Please try again.");
     }
 
@@ -61,6 +69,7 @@ export function Login() {
   };
 
   const handleGoogleError = () => {
+    console.log("❌ [Login Page] Google sign-in error/cancelled");
     setError("Google sign-in was cancelled or failed. Please try again.");
   };
 
