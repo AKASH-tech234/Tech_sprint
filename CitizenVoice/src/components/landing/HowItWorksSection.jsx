@@ -1,5 +1,6 @@
 // Merged How It Works + Features Section with Animations
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import { 
   MessageSquare, 
   MapPin, 
@@ -8,10 +9,92 @@ import {
   Bell,
   TrendingUp,
   Shield,
-  Zap
+  Zap,
+  Camera,
+  Sparkles,
+  BarChart3
 } from "lucide-react";
+import RadialOrbitalTimeline from "../ui/radial-orbital-timeline";
 
 export function HowItWorksSection() {
+  const sectionRef = useRef(null);
+  
+  // Scroll-based animation for the entire section
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"]
+  });
+
+  // Timeline data for RadialOrbitalTimeline
+  const timelineData = [
+    {
+      id: 1,
+      title: "One-Tap Reporting",
+      date: "Step 01",
+      content: "Snap a photo, and GPS automatically captures your location. Report civic issues in under 2 minutes with zero friction.",
+      category: "Reporting",
+      icon: Camera,
+      relatedIds: [2],
+      status: "completed",
+      energy: 100,
+    },
+    {
+      id: 2,
+      title: "AI Auto-Routing",
+      date: "Step 02",
+      content: "Gemini AI instantly categorizes your issue and routes it to the correct municipal department. 85%+ accuracy guaranteed.",
+      category: "AI",
+      icon: Sparkles,
+      relatedIds: [1, 3],
+      status: "completed",
+      energy: 90,
+    },
+    {
+      id: 3,
+      title: "Public Heat Map",
+      date: "Step 03",
+      content: "See all reported issues on an interactive map. Track status, resolution times, and identify problem hotspots in your area.",
+      category: "Visualization",
+      icon: MapPin,
+      relatedIds: [2, 4],
+      status: "in-progress",
+      energy: 75,
+    },
+    {
+      id: 4,
+      title: "Municipal Dashboard",
+      date: "Step 04",
+      content: "Officials get a powerful dashboard to track assigned issues, monitor team performance, and analyze resolution metrics.",
+      category: "Dashboard",
+      icon: BarChart3,
+      relatedIds: [3, 5],
+      status: "in-progress",
+      energy: 60,
+    },
+    {
+      id: 5,
+      title: "Community Verification",
+      date: "Step 05",
+      content: "Citizens verify resolutions with before/after photos. Crowdsourced accountability ensures issues are truly fixed.",
+      category: "Verification",
+      icon: CheckCircle2,
+      relatedIds: [4, 6],
+      status: "pending",
+      energy: 40,
+    },
+    {
+      id: 6,
+      title: "Real-Time Updates",
+      date: "Step 06",
+      content: "Get instant notifications when your issue is acknowledged, assigned, or resolved. Never be left in the dark again.",
+      category: "Notifications",
+      icon: Bell,
+      relatedIds: [5],
+      status: "pending",
+      energy: 25,
+    },
+  ];
+
   const steps = [
     {
       number: "01",
@@ -101,7 +184,7 @@ export function HowItWorksSection() {
   };
 
   return (
-    <section className="relative py-24 overflow-hidden bg-gradient-to-b from-black via-black to-black">
+    <section ref={sectionRef} className="relative py-24 overflow-hidden bg-gradient-to-b from-black via-black to-black">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_70%,transparent_110%)]" />
       
@@ -146,13 +229,25 @@ export function HowItWorksSection() {
           viewport={{ once: true, margin: "-100px" }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20"
         >
-          {steps.map((step, index) => (
-            <motion.div
-              key={index}
-              variants={itemVariants}
-              whileHover={{ y: -8, transition: { duration: 0.3 } }}
-              className="group relative"
-            >
+          {steps.map((step, index) => {
+            const cardRef = useRef(null);
+            const { scrollYProgress: cardProgress } = useScroll({
+              target: cardRef,
+              offset: ["start end", "end start"]
+            });
+            
+            const scale = useTransform(cardProgress, [0, 0.5, 1], [0.85, 1.05, 0.85]);
+            const opacity = useTransform(cardProgress, [0, 0.3, 0.7, 1], [0.5, 1, 1, 0.5]);
+            
+            return (
+              <motion.div
+                key={index}
+                ref={cardRef}
+                variants={itemVariants}
+                style={{ scale, opacity }}
+                whileHover={{ y: -8, transition: { duration: 0.3 } }}
+                className="group relative"
+              >
               {/* Connecting Line (hidden on last item and mobile) */}
               {index < steps.length - 1 && (
                 <div className="hidden lg:block absolute top-20 left-full w-full h-[2px] bg-gradient-to-r from-white/20 to-transparent" />
@@ -199,7 +294,8 @@ export function HowItWorksSection() {
                 </div>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </motion.div>
 
         {/* Key Features Grid */}
@@ -208,15 +304,24 @@ export function HowItWorksSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mb-12"
+          className="mb-16"
         >
-          <h3 className="text-3xl font-bold text-center mb-12">
+          <h3 className="text-3xl font-bold text-center mb-4">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/80">
               Powerful Features
             </span>
           </h3>
+          <p className="text-white/60 text-center max-w-2xl mx-auto mb-12">
+            Click on each node to explore our interconnected feature ecosystem
+          </p>
         </motion.div>
 
+        {/* Radial Orbital Timeline */}
+        <ScrollExpandSection>
+          <RadialOrbitalTimeline timelineData={timelineData} />
+        </ScrollExpandSection>
+
+        {/* Additional Feature Cards */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -224,13 +329,25 @@ export function HowItWorksSection() {
           viewport={{ once: true, margin: "-50px" }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
         >
-          {keyFeatures.map((feature, index) => (
-            <motion.div
-              key={index}
-              variants={featureVariants}
-              whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
-              className="group relative p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer"
-            >
+          {keyFeatures.map((feature, index) => {
+            const featureRef = useRef(null);
+            const { scrollYProgress: featureProgress } = useScroll({
+              target: featureRef,
+              offset: ["start end", "end start"]
+            });
+            
+            const featureScale = useTransform(featureProgress, [0, 0.5, 1], [0.9, 1.08, 0.9]);
+            const featureOpacity = useTransform(featureProgress, [0, 0.3, 0.7, 1], [0.4, 1, 1, 0.4]);
+            
+            return (
+              <motion.div
+                key={index}
+                ref={featureRef}
+                variants={featureVariants}
+                style={{ scale: featureScale, opacity: featureOpacity }}
+                whileHover={{ scale: 1.12, transition: { duration: 0.2 } }}
+                className="group relative p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer"
+              >
               {/* Hover Glow */}
               <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 via-pink-500/10 to-violet-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               
@@ -251,7 +368,8 @@ export function HowItWorksSection() {
                 </p>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </motion.div>
 
         {/* Bottom CTA */}
@@ -275,5 +393,28 @@ export function HowItWorksSection() {
         </motion.div>
       </div>
     </section>
+  );
+}
+
+// Scroll Expand Component for Timeline
+function ScrollExpandSection({ children }) {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"]
+  });
+  
+  const scale = useTransform(scrollYProgress, [0, 0.4, 0.6, 1], [0.8, 1.1, 1.1, 0.8]);
+  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.3, 1, 1, 0.3]);
+  
+  return (
+    <motion.div
+      ref={ref}
+      style={{ scale, opacity }}
+      className="mb-20"
+      transition={{ type: "spring", stiffness: 100, damping: 30 }}
+    >
+      {children}
+    </motion.div>
   );
 }
