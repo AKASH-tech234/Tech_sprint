@@ -1,0 +1,14 @@
+# Environment variables
+.env
+.env.*
+Backend/.env
+Backend/.env.*
+
+# Node dependencies
+node_modules/
+Backend/node_modules/
+CitizenVoice/node_modules/
+uploads/
+*.jpg
+*.png
+*.jpeg

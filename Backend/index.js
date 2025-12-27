@@ -51,6 +51,7 @@ app.get("/", (req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 
+
 // Global error handler
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
