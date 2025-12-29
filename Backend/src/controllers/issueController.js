@@ -1,10 +1,14 @@
 import Issue from '../models/Issue.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-import { AsyncHandler } from '../utils/AsyncHandler.js';
+import { asyncHandler } from '../utils/AsyncHandler.js';
 
 // Create Issue
-export const createIssue = AsyncHandler(async (req, res) => {
+export const createIssue = asyncHandler(async (req, res) => {
+  console.log('📝 [CreateIssue] Request received');
+  console.log('📝 [CreateIssue] Body:', req.body);
+  console.log('📝 [CreateIssue] Files:', req.files ? req.files.length : 0);
+  
   const { title, description, category, priority, location } = req.body;
   
   // Parse location JSON string
@@ -21,12 +25,31 @@ export const createIssue = AsyncHandler(async (req, res) => {
   }
   
   // Get uploaded image URLs
+  const useCloudinary = process.env.USE_CLOUDINARY === 'true';
+  console.log(`📸 [CreateIssue] Using Cloudinary: ${useCloudinary}`);
+  
   const imageUrls = req.files ? req.files.map(file => {
+    console.log('📸 [CreateIssue] Processing file:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      path: file.path,
+      filename: file.filename
+    });
+    
+    // For Cloudinary, use the path provided by Cloudinary
+    if (useCloudinary) {
+      console.log('☁️ [CreateIssue] Using Cloudinary path:', file.path);
+      return file.path;
+    }
     // For local storage
-    return `${req.protocol}://${req.get('host')}/uploads/issues/${file.filename}`;
-    // For Cloudinary
-    // return file.path;
+    const localPath = `${req.protocol}://${req.get('host')}/uploads/issues/${file.filename}`;
+    console.log('💾 [CreateIssue] Using local path:', localPath);
+    return localPath;
   }) : [];
+  
+  console.log('📸 [CreateIssue] Final image URLs:', imageUrls);
   
   // Create issue
   const issue = await Issue.create({
@@ -39,6 +62,8 @@ export const createIssue = AsyncHandler(async (req, res) => {
     reportedBy: req.user._id
   });
   
+  console.log('✅ [CreateIssue] Issue created with images:', issue.images);
+  
   // Populate user details
   await issue.populate('reportedBy', 'username email avatar');
   
@@ -48,7 +73,7 @@ export const createIssue = AsyncHandler(async (req, res) => {
 });
 
 // Get User's Issues
-export const getMyIssues = AsyncHandler(async (req, res) => {
+export const getMyIssues = asyncHandler(async (req, res) => {
   const { status, category } = req.query;
   
   const query = { reportedBy: req.user._id };
@@ -72,7 +97,7 @@ export const getMyIssues = AsyncHandler(async (req, res) => {
 });
 
 // Get Recent Issues
-export const getRecentIssues = AsyncHandler(async (req, res) => {
+export const getRecentIssues = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 6;
   
   const issues = await Issue.find()
@@ -86,7 +111,7 @@ export const getRecentIssues = AsyncHandler(async (req, res) => {
 });
 
 // Get Issues for Map
-export const getMapIssues = AsyncHandler(async (req, res) => {
+export const getMapIssues = asyncHandler(async (req, res) => {
   const { bounds, status, category } = req.query;
   
   const query = {};
@@ -116,7 +141,7 @@ export const getMapIssues = AsyncHandler(async (req, res) => {
 });
 
 // Get Nearby Issues
-export const getNearbyIssues = AsyncHandler(async (req, res) => {
+export const getNearbyIssues = asyncHandler(async (req, res) => {
   const { lat, lng, radius } = req.query;
   
   if (!lat || !lng) {
@@ -167,7 +192,7 @@ export const getNearbyIssues = AsyncHandler(async (req, res) => {
 });
 
 // Upvote Issue
-export const upvoteIssue = AsyncHandler(async (req, res) => {
+export const upvoteIssue = asyncHandler(async (req, res) => {
   const { issueId } = req.params;
   
   const issue = await Issue.findById(issueId);
@@ -195,8 +220,72 @@ export const upvoteIssue = AsyncHandler(async (req, res) => {
   );
 });
 
+// Get Single Issue
+export const getIssue = asyncHandler(async (req, res) => {
+  const { issueId } = req.params;
+  
+  const issue = await Issue.findById(issueId)
+    .populate('reportedBy', 'username avatar email')
+    .populate('assignedTo', 'username email');
+  
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  
+  res.json(
+    new ApiResponse(200, issue, 'Issue fetched successfully')
+  );
+});
+
+// Update Issue
+export const updateIssue = asyncHandler(async (req, res) => {
+  const { issueId } = req.params;
+  const { title, description, category, priority, location, status } = req.body;
+  
+  const issue = await Issue.findById(issueId);
+  
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  
+  // Check ownership or admin rights
+  if (issue.reportedBy.toString() !== req.user._id.toString() && req.user.role !== 'official') {
+    throw new ApiError(403, 'Not authorized to update this issue');
+  }
+  
+  // Update fields
+  if (title) issue.title = title;
+  if (description) issue.description = description;
+  if (category) issue.category = category;
+  if (priority) issue.priority = priority;
+  if (status) issue.status = status;
+  
+  if (location) {
+    const parsedLocation = typeof location === 'string' ? JSON.parse(location) : location;
+    issue.location = parsedLocation;
+  }
+  
+  // Handle new images
+  if (req.files && req.files.length > 0) {
+    const useCloudinary = process.env.USE_CLOUDINARY === 'true';
+    const newImages = req.files.map(file => {
+      if (useCloudinary) {
+        return file.path;
+      }
+      return `${req.protocol}://${req.get('host')}/uploads/issues/${file.filename}`;
+    });
+    issue.images = [...issue.images, ...newImages];
+  }
+  
+  await issue.save();
+  
+  res.json(
+    new ApiResponse(200, issue, 'Issue updated successfully')
+  );
+});
+
 // Delete Issue
-export const deleteIssue = AsyncHandler(async (req, res) => {
+export const deleteIssue = asyncHandler(async (req, res) => {
   const { issueId } = req.params;
   
   const issue = await Issue.findById(issueId);

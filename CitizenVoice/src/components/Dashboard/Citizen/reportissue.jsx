@@ -50,7 +50,7 @@ const priorities = [
   { value: "high", label: "High", color: "text-rose-400" },
 ];
 
-export function ReportIssue({ isOpen, onClose, onSuccess }) {
+export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, initialData = null }) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -73,12 +73,39 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
 
-  // Auto-detect location on mount
+  // Initialize form data when editing
   useEffect(() => {
-    if (isOpen && !formData.location.lat) {
+    if (editMode && initialData && isOpen) {
+      setFormData({
+        title: initialData.title || "",
+        description: initialData.description || "",
+        category: initialData.category || "",
+        priority: initialData.priority || "medium",
+        location: initialData.location || {
+          address: "",
+          lat: null,
+          lng: null,
+          city: "",
+          state: ""
+        },
+      });
+      
+      // Set existing images if any
+      if (initialData.images && initialData.images.length > 0) {
+        setImagePreviews(initialData.images);
+        // Images are already uploaded, we'll keep the URLs
+      }
+    } else if (!editMode && isOpen && !formData.location.lat) {
       getCurrentLocation();
     }
-  }, [isOpen]);
+  }, [isOpen, editMode, initialData]);
+
+  // Auto-detect location on mount (only for new issues)
+  useEffect(() => {
+    if (isOpen && !editMode && !formData.location.lat) {
+      getCurrentLocation();
+    }
+  }, [isOpen, editMode]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -156,6 +183,8 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
       async (position) => {
         const { latitude, longitude, accuracy } = position.coords;
         
+        console.log(`✅ Location acquired: ${latitude}, ${longitude} (accuracy: ${accuracy.toFixed(0)}m)`);
+        
         // Update coordinates immediately
         setFormData((prev) => ({
           ...prev,
@@ -199,9 +228,8 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
             },
           }));
 
-          console.log(`Location acquired with accuracy: ${accuracy.toFixed(0)}m`);
         } catch (err) {
-          console.error("Reverse geocoding failed:", err);
+          console.error("❌ Reverse geocoding failed:", err);
           // Fallback to coordinates
           setFormData((prev) => ({
             ...prev,
@@ -215,22 +243,23 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
         setGettingLocation(false);
       },
       (error) => {
+        console.error("❌ Geolocation error:", error);
         let errorMessage = "Unable to get your location. ";
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage += "Please enable location permissions.";
+            errorMessage = "Location permission denied. Please enable location access in your browser settings or enter location manually.";
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage += "Location information unavailable.";
+            errorMessage = "Location information is unavailable. Please enter location manually.";
             break;
           case error.TIMEOUT:
-            errorMessage += "Location request timed out.";
+            errorMessage = "Location request timed out. Please try again or enter manually.";
             break;
           default:
-            errorMessage += "Please enter manually.";
+            errorMessage = "An error occurred while getting location. Please enter manually.";
         }
-        setError(errorMessage);
-        setTimeout(() => setError(null), 5000);
+        console.warn("⚠️ " + errorMessage);
+        // Don't show error for permission denial, just log it
         setGettingLocation(false);
       },
       {
@@ -267,20 +296,6 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
     setUploadProgress(0);
 
     try {
-      /**
-       * BACKEND API CALL: Create Issue
-       * Endpoint: POST /api/issues/create
-       * Content-Type: multipart/form-data
-       * 
-       * FormData fields:
-       * - title: string
-       * - description: string
-       * - category: string
-       * - priority: string
-       * - location: JSON string { address, lat, lng, city, state }
-       * - images: File[] (array of image files)
-       */
-
       // Prepare FormData for multipart upload
       const formDataToSend = new FormData();
       formDataToSend.append('title', formData.title);
@@ -289,7 +304,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
       formDataToSend.append('priority', formData.priority);
       formDataToSend.append('location', JSON.stringify(formData.location));
       
-      // Append images
+      // Append new images (if any)
       images.forEach((image, index) => {
         formDataToSend.append('images', image);
       });
@@ -305,32 +320,39 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
         });
       }, 200);
 
-      // Call backend API
-      const result = await issueService.createIssue(formDataToSend);
+      let result;
+      
+      if (editMode && initialData) {
+        // Update existing issue
+        result = await issueService.updateIssue(initialData._id, formDataToSend);
+      } else {
+        // Create new issue
+        result = await issueService.createIssue(formDataToSend);
+        
+        // Store the new issue in localStorage temporarily (for immediate display)
+        const newIssue = {
+          id: result.issue?.id || `ISS-${Date.now()}`,
+          ...formData,
+          images: imagePreviews,
+          upvotes: 0,
+          comments: [],
+          status: 'reported',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Save to localStorage for immediate reflection
+        const existingIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
+        localStorage.setItem('userIssues', JSON.stringify([newIssue, ...existingIssues]));
+
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('issueCreated', { detail: newIssue }));
+        console.log("✅ Issue saved and event dispatched:", newIssue.id);
+      }
       
       clearInterval(progressInterval);
       setUploadProgress(100);
       setSuccess(true);
-
-      // Store the new issue in localStorage temporarily (for immediate display)
-      const newIssue = {
-        id: result.issue?.id || `ISS-${Date.now()}`,
-        ...formData,
-        images: imagePreviews,
-        upvotes: 0,
-        comments: [],
-        status: 'reported',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Save to localStorage for immediate reflection
-      const existingIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
-      localStorage.setItem('userIssues', JSON.stringify([newIssue, ...existingIssues]));
-
-      // Dispatch custom event to notify other components
-      window.dispatchEvent(new CustomEvent('issueCreated', { detail: newIssue }));
-      console.log("✅ Issue saved and event dispatched:", newIssue.id);
 
       // Reset form after short delay
       setTimeout(() => {
@@ -345,12 +367,18 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
         setImagePreviews([]);
         setSuccess(false);
         setUploadProgress(0);
-        onSuccess?.(newIssue);
+        
+        // Pass the FormData or result to parent for database update
+        if (editMode) {
+          onSuccess?.(formDataToSend); // Pass FormData for update
+        } else {
+          onSuccess?.(result); // Pass result for create
+        }
         onClose?.();
       }, 2000);
     } catch (err) {
-      console.error("Issue creation error:", err);
-      setError(err.message || "Failed to submit issue. Please try again.");
+      console.error(editMode ? "Issue update error:" : "Issue creation error:", err);
+      setError(err.message || `Failed to ${editMode ? 'update' : 'submit'} issue. Please try again.`);
       setUploadProgress(0);
     } finally {
       setLoading(false);
@@ -364,7 +392,9 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
       <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]">
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 p-4">
-          <h2 className="text-xl font-semibold text-white">Report an Issue</h2>
+          <h2 className="text-xl font-semibold text-white">
+            {editMode ? "Edit Issue" : "Report an Issue"}
+          </h2>
           <button
             onClick={onClose}
             className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
@@ -380,7 +410,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess }) {
               <CheckCircle2 className="h-8 w-8 text-emerald-400" />
             </div>
             <h3 className="mb-2 text-xl font-semibold text-white">
-              Issue Reported Successfully!
+              {editMode ? "Issue Updated Successfully!" : "Issue Reported Successfully!"}
             </h3>
             <p className="text-center text-white/60">
               Thank you for your report. We'll notify you when there's an

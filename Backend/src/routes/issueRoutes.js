@@ -30,6 +30,5 @@ router.delete('/:issueId', deleteIssue);
 
 // Issue actions
 router.post('/:issueId/upvote', upvoteIssue);
-router.delete('/:issueId', deleteIssue);
 
 export default router;

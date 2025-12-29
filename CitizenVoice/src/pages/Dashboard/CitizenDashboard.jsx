@@ -10,6 +10,7 @@ import { ReportIssue } from "../../components/Dashboard/Citizen/reportissue";
 import { IssueMap } from "../../components/Dashboard/Citizen/IssueMap";
 import { NearbyIssuesMap } from "../../components/Dashboard/Shared/NearbyIssuesMap";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
+import { issueService } from "../../services/issueService";
 import {
   FileText,
   Clock,
@@ -92,46 +93,83 @@ function DashboardHome() {
     updateStats();
   }, [refreshKey]);
 
-  const loadRecentIssues = () => {
-    /**
-     * BACKEND API CALL: Get Recent Issues
-     * Endpoint: GET /api/issues/recent?limit=6
-     * Returns: { success: true, issues: [...] }
-     */
-    
-    // Load from localStorage + mock data
-    const userIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
-    const allIssues = [...userIssues, ...mockRecentIssues];
-    
-    // Remove duplicates and sort by date
-    const uniqueIssues = allIssues.filter((issue, index, self) =>
-      index === self.findIndex((i) => i.id === issue.id)
-    );
-    uniqueIssues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
-    // Take only first 6 for recent display
-    setRecentIssues(uniqueIssues.slice(0, 6));
+  // Listen for issue events (created, updated, deleted)
+  React.useEffect(() => {
+    const handleIssueCreated = () => {
+      console.log("📢 Dashboard: Issue created event received");
+      setRefreshKey(prev => prev + 1);
+    };
+
+    const handleIssueUpdated = () => {
+      console.log("📢 Dashboard: Issue updated event received");
+      setRefreshKey(prev => prev + 1);
+    };
+
+    const handleIssueDeleted = () => {
+      console.log("📢 Dashboard: Issue deleted event received");
+      setRefreshKey(prev => prev + 1);
+    };
+
+    window.addEventListener('issueCreated', handleIssueCreated);
+    window.addEventListener('issueUpdated', handleIssueUpdated);
+    window.addEventListener('issueDeleted', handleIssueDeleted);
+
+    return () => {
+      window.removeEventListener('issueCreated', handleIssueCreated);
+      window.removeEventListener('issueUpdated', handleIssueUpdated);
+      window.removeEventListener('issueDeleted', handleIssueDeleted);
+    };
+  }, []);
+
+  const loadRecentIssues = async () => {
+    try {
+      // Fetch ALL recent issues from backend API (from all users)
+      const response = await issueService.getIssues({ limit: 6 });
+      
+      if (response.data && response.data.issues) {
+        // Sort by date and take first 6
+        const sortedIssues = response.data.issues
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 6);
+        
+        setRecentIssues(sortedIssues);
+      }
+    } catch (err) {
+      console.error("Failed to load recent issues:", err);
+      // Fallback to mock data on error
+      setRecentIssues(mockRecentIssues);
+    }
   };
 
-  const updateStats = () => {
-    /**
-     * BACKEND API CALL: Get User Stats
-     * Endpoint: GET /api/users/me/stats
-     * Returns: { totalIssues, activeIssues, resolutionRate, totalUpvotes }
-     */
-    
-    const userIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
-    const totalUserIssues = userIssues.length;
-    const activeUserIssues = userIssues.filter(i => 
-      ['reported', 'acknowledged', 'in-progress'].includes(i.status)
-    ).length;
-    
-    setStats({
-      totalIssues: mockStats.totalIssues + totalUserIssues,
-      activeIssues: mockStats.activeIssues + activeUserIssues,
-      resolutionRate: mockStats.resolutionRate,
-      totalUpvotes: mockStats.totalUpvotes + userIssues.reduce((sum, i) => sum + (i.upvotes || 0), 0),
-    });
+  const updateStats = async () => {
+    try {
+      // Fetch ALL issues to calculate community stats
+      const allIssuesResponse = await issueService.getIssues({});
+      
+      if (allIssuesResponse.data && allIssuesResponse.data.issues) {
+        const allIssues = allIssuesResponse.data.issues;
+        const activeIssues = allIssues.filter(i => 
+          ['reported', 'acknowledged', 'in-progress'].includes(i.status)
+        ).length;
+        
+        const resolvedIssues = allIssues.filter(i => i.status === 'resolved').length;
+        const resolutionRate = allIssues.length > 0 
+          ? Math.round((resolvedIssues / allIssues.length) * 100) 
+          : 0;
+        
+        const totalUpvotes = allIssues.reduce((sum, i) => sum + (i.upvotes?.length || 0), 0);
+        
+        setStats({
+          totalIssues: allIssues.length,
+          activeIssues: activeIssues,
+          resolutionRate: resolutionRate,
+          totalUpvotes: totalUpvotes,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update stats:", err);
+      // Keep existing stats on error
+    }
   };
 
   const handleViewIssue = (issue) => {
@@ -163,7 +201,7 @@ function DashboardHome() {
             Welcome back! 👋
           </h1>
           <p className="text-white/60">
-            Here's what's happening with your reported issues.
+            Here's what's happening in your community.
           </p>
         </div>
         <button
@@ -178,7 +216,7 @@ function DashboardHome() {
       {/* Stats cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-          title="Total Issues"
+          title="Community Issues"
           value={stats.totalIssues}
           icon={FileText}
           color="rose"
@@ -200,7 +238,7 @@ function DashboardHome() {
           trendValue={5}
         />
         <StatsCard
-          title="Total Upvotes"
+          title="Community Upvotes"
           value={stats.totalUpvotes}
           icon={ThumbsUp}
           color="amber"
@@ -212,7 +250,7 @@ function DashboardHome() {
       {/* Recent Issues */}
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">Recent Issues</h2>
+          <h2 className="text-xl font-semibold text-white">Community Recent Issues</h2>
           <button
             onClick={() => navigate("/dashboard/citizen/issues")}
             className="flex items-center gap-1 text-sm text-rose-400 transition-colors hover:text-rose-300"
@@ -223,7 +261,7 @@ function DashboardHome() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {recentIssues.map((issue) => (
-            <IssueCard key={issue.id} issue={issue} onView={handleViewIssue} />
+            <IssueCard key={issue._id || issue.id} issue={issue} onView={handleViewIssue} />
           ))}
         </div>
       </div>
