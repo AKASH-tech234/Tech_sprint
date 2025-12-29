@@ -101,17 +101,27 @@ export const createIssue = asyncHandler(async (req, res) => {
   console.log('📸 [CreateIssue] Final image URLs:', imageUrls);
   
   // Create issue
-  const issue = await Issue.create({
-    title,
-    description,
-    category,
-    priority: priority || 'medium',
-    location: locationData,
-    images: imageUrls,
-    reportedBy: req.user._id
-  });
-  
-  console.log('✅ [CreateIssue] Issue created with images:', issue.images);
+  let issue;
+  try {
+    issue = await Issue.create({
+      title,
+      description,
+      category,
+      priority: priority || 'medium',
+      location: locationData,
+      images: imageUrls,
+      reportedBy: req.user._id
+    });
+    
+    console.log('✅ [CreateIssue] Issue created with images:', issue.images);
+  } catch (error) {
+    // If database save fails, clean up uploaded images from Cloudinary
+    if (imageUrls.length > 0 && useCloudinary) {
+      console.log('❌ [CreateIssue] Database save failed, cleaning up Cloudinary images');
+      await deleteImagesFromCloudinary(imageUrls);
+    }
+    throw error; // Re-throw the error
+  }
   
   // Populate user details
   await issue.populate('reportedBy', 'username email avatar');
