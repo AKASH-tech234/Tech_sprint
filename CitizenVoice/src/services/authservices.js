@@ -2,14 +2,14 @@
 import axios from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 console.log("🔧 [AuthService] API Base URL:", API_BASE_URL);
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true, // Important: include cookies
+  baseURL: `${API_BASE_URL}/api/auth`,
+  withCredentials: true, // ✅ REQUIRED for HTTP-only cookies
   headers: {
     "Content-Type": "application/json",
   },
@@ -36,15 +36,22 @@ api.interceptors.response.use(
     console.log(`📥 [API Response] ${response.status}`, response.data);
     return response;
   },
-  (error) => {
+   (error) => {
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      "Something went wrong";
+
+    const err = new Error(message);
+    err.status = error.response?.status;
+
     console.error("❌ [API Error]", {
-      status: error.response?.status,
-      message: error.response?.data?.message || error.message,
+      status: err.status,
+      message: err.message,
       data: error.response?.data,
     });
-    const message =
-      error.response?.data?.message || error.message || "An error occurred";
-    throw new Error(message);
+
+    throw err;
   }
 );
 
@@ -52,7 +59,7 @@ class AuthService {
   // Login with email/password
   async login(email, password) {
     console.log("🔐 [AuthService] Login attempt for:", email);
-    const { data } = await api.post("/auth/login", { email, password });
+    const { data } = await api.post("/login", { email, password });
     console.log("✅ [AuthService] Login successful:", data.data);
     return data.data;
   }
@@ -60,7 +67,7 @@ class AuthService {
   // Signup with email/password
   async signup(username, email, password, role) {
     console.log("📝 [AuthService] Signup attempt:", { username, email, role });
-    const { data } = await api.post("/auth/signup", {
+    const { data } = await api.post("/signup", {
       username,
       email,
       password,
@@ -73,7 +80,7 @@ class AuthService {
   // Google OAuth authentication
   async googleAuth(credential, role) {
     console.log("🔷 [AuthService] Google Auth attempt for role:", role);
-    const { data } = await api.post("/auth/google", { credential, role });
+    const { data } = await api.post("/google", { credential, role });
     console.log("✅ [AuthService] Google Auth successful:", data.data);
     return data.data;
   }
@@ -82,7 +89,7 @@ class AuthService {
   async checkAuth() {
     console.log("🔍 [AuthService] Checking authentication...");
     try {
-      const { data } = await api.get("/auth/check");
+      const { data } = await api.get("/check");
       console.log("✅ [AuthService] Auth check result:", data.data);
       return data.data;
     } catch (error) {
@@ -94,7 +101,7 @@ class AuthService {
   // Get current user data (protected route)
   async getCurrentUser() {
     console.log("👤 [AuthService] Getting current user...");
-    const { data } = await api.get("/auth/me");
+    const { data } = await api.get("/me");
     console.log("✅ [AuthService] Current user:", data.data);
     return data.data;
   }
@@ -103,7 +110,7 @@ class AuthService {
   async logout() {
     console.log("🚪 [AuthService] Logging out...");
     try {
-      await api.post("/auth/logout");
+      await api.post("/logout");
       console.log("✅ [AuthService] Logout successful");
     } catch (error) {
       console.error("❌ [AuthService] Logout error:", error);
