@@ -1,3 +1,4 @@
+//when using google authentication make sure to put client ID in frontend and backend 
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -56,3 +57,4 @@ const start = async () => {
 };
 
 start();
+ 

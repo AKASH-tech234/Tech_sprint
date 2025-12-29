@@ -8,7 +8,7 @@ console.log("🔧 [AuthService] API Base URL:", API_BASE_URL);
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api/auth`,
+  baseURL: `${API_BASE_URL}/auth`,
   withCredentials: true, // ✅ REQUIRED for HTTP-only cookies
   headers: {
     "Content-Type": "application/json",
