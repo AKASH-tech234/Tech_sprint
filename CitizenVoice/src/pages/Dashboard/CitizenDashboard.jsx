@@ -182,6 +182,29 @@ function DashboardHome() {
     // navigate(`/dashboard/citizen/issue/${issue.id}`);
   };
 
+  const handleUpvote = async (issueId) => {
+    try {
+      // Call backend API to upvote
+      const response = await issueService.upvoteIssue(issueId);
+      
+      // Update the recent issues list with new upvote count
+      setRecentIssues((prev) =>
+        prev.map((issue) =>
+          issue._id === issueId
+            ? { ...issue, upvotes: Array.isArray(issue.upvotes) ? [...issue.upvotes] : [], upvoteCount: response.data.upvotes }
+            : issue
+        )
+      );
+      
+      // Refresh stats to update total upvotes
+      updateStats();
+      
+      console.log("✅ Issue upvoted:", issueId);
+    } catch (err) {
+      console.error("Failed to upvote:", err);
+    }
+  };
+
   const handleIssueCreated = (newIssue) => {
     console.log("✅ New issue created:", newIssue.id);
     
@@ -261,7 +284,7 @@ function DashboardHome() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {recentIssues.map((issue) => (
-            <IssueCard key={issue._id || issue.id} issue={issue} onView={handleViewIssue} />
+            <IssueCard key={issue._id || issue.id} issue={issue} onView={handleViewIssue} onUpvote={handleUpvote} />
           ))}
         </div>
       </div>

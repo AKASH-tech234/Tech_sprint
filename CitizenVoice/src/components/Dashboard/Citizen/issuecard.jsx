@@ -232,7 +232,7 @@ export function IssueCard({
               title="Upvote this issue"
             >
               <ThumbsUp className="h-4 w-4" />
-              <span>{issue.upvotes || 0}</span>
+              <span>{issue.upvoteCount || issue.upvotes?.length || 0}</span>
             </button>
             <span className="flex items-center gap-1 text-sm text-white/60">
               <MessageCircle className="h-4 w-4" />

@@ -264,9 +264,11 @@ export const upvoteIssue = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const upvoteIndex = issue.upvotes.indexOf(userId);
   
+  let action = 'added';
   if (upvoteIndex > -1) {
     // Remove upvote
     issue.upvotes.splice(upvoteIndex, 1);
+    action = 'removed';
   } else {
     // Add upvote
     issue.upvotes.push(userId);
@@ -274,8 +276,14 @@ export const upvoteIssue = asyncHandler(async (req, res) => {
   
   await issue.save();
   
+  console.log(`👍 [Upvote] User ${req.user.username} ${action} upvote for issue ${issueId}`);
+  
   res.json(
-    new ApiResponse(200, { upvotes: issue.upvotes.length }, 'Upvote updated')
+    new ApiResponse(200, { 
+      upvotes: issue.upvotes.length, 
+      hasUpvoted: action === 'added',
+      action 
+    }, `Upvote ${action}`)
   );
 });
 

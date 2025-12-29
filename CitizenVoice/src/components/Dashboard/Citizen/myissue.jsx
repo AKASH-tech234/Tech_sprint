@@ -160,19 +160,22 @@ export function MyIssues({ onViewIssue }) {
   const handleUpvote = async (issueId) => {
     try {
       // Call backend API to upvote
-      await issueService.upvoteIssue(issueId);
+      const response = await issueService.upvoteIssue(issueId);
       
-      // Update local state optimistically
+      // Update local state with the new upvotes count from server
       setIssues((prev) =>
         prev.map((issue) =>
           issue._id === issueId
-            ? { ...issue, upvotes: issue.upvotes + 1 }
+            ? { ...issue, upvotes: Array.isArray(issue.upvotes) ? [...issue.upvotes] : [], upvoteCount: response.data.upvotes }
             : issue
         )
       );
+      
+      console.log("✅ Issue upvoted:", issueId);
     } catch (err) {
       console.error("Failed to upvote:", err);
-      // Optionally show error notification
+      setError("Failed to upvote issue. Please try again.");
+      setTimeout(() => setError(null), 3000);
     }
   };
 
