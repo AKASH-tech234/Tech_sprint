@@ -6,7 +6,9 @@ import {
   getMapIssues,
   getNearbyIssues,
   upvoteIssue,
-  deleteIssue
+  deleteIssue,
+  getIssue,
+  updateIssue
 } from '../controllers/issueController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { uploadIssueImages } from '../middleware/uploadMiddleware.js';
@@ -22,6 +24,9 @@ router.get('/my-issues', getMyIssues);
 router.get('/recent', getRecentIssues);
 router.get('/map', getMapIssues);
 router.get('/nearby', getNearbyIssues);
+router.get('/:issueId', getIssue);
+router.put('/:issueId', uploadIssueImages, updateIssue);
+router.delete('/:issueId', deleteIssue);
 
 // Issue actions
 router.post('/:issueId/upvote', upvoteIssue);
