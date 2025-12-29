@@ -21,7 +21,7 @@ const issueSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['pothole', 'streetlight', 'graffiti', 'garbage', 'water', 'traffic', 'parks', 'other']
+    enum: ['pothole', 'streetlight', 'garbage', 'water', 'traffic', 'noise', 'safety', 'other']
   },
   priority: {
     type: String,

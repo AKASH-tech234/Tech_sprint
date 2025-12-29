@@ -2,6 +2,55 @@ import Issue from '../models/Issue.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Helper function to extract public_id from Cloudinary URL
+const getPublicIdFromUrl = (url) => {
+  try {
+    // Example URL: https://res.cloudinary.com/dmvg9skbm/image/upload/v1767029697/citizenvoice/issues/issue-1767029692617-276101587.png
+    // Extract: citizenvoice/issues/issue-1767029692617-276101587
+    const parts = url.split('/upload/');
+    if (parts.length < 2) return null;
+    
+    const pathParts = parts[1].split('/');
+    // Remove version (v1767029697) if present
+    const filteredParts = pathParts.filter(part => !part.startsWith('v'));
+    
+    // Join folder and filename, remove extension
+    const publicId = filteredParts.join('/').replace(/\.[^/.]+$/, '');
+    return publicId;
+  } catch (error) {
+    console.error('Error extracting public_id:', error);
+    return null;
+  }
+};
+
+// Helper function to delete images from Cloudinary
+const deleteImagesFromCloudinary = async (imageUrls) => {
+  if (!imageUrls || imageUrls.length === 0) return;
+  
+  const useCloudinary = process.env.USE_CLOUDINARY === 'true';
+  if (!useCloudinary) return;
+
+  const deletionResults = [];
+  
+  for (const url of imageUrls) {
+    try {
+      const publicId = getPublicIdFromUrl(url);
+      if (publicId) {
+        console.log(`🗑️ [Cloudinary] Deleting image: ${publicId}`);
+        const result = await cloudinary.uploader.destroy(publicId);
+        console.log(`✅ [Cloudinary] Deletion result:`, result);
+        deletionResults.push({ url, publicId, result });
+      }
+    } catch (error) {
+      console.error(`❌ [Cloudinary] Failed to delete image ${url}:`, error);
+      deletionResults.push({ url, error: error.message });
+    }
+  }
+  
+  return deletionResults;
+};
 
 // Create Issue
 export const createIssue = asyncHandler(async (req, res) => {
@@ -268,12 +317,24 @@ export const updateIssue = asyncHandler(async (req, res) => {
   // Handle new images
   if (req.files && req.files.length > 0) {
     const useCloudinary = process.env.USE_CLOUDINARY === 'true';
+    
+    // If replacing images (not appending), delete old images from Cloudinary
+    const shouldReplaceImages = req.body.replaceImages === 'true';
+    
+    if (shouldReplaceImages && issue.images && issue.images.length > 0) {
+      console.log(`🗑️ [UpdateIssue] Replacing images, deleting ${issue.images.length} old images`);
+      await deleteImagesFromCloudinary(issue.images);
+      issue.images = []; // Clear old images
+    }
+    
     const newImages = req.files.map(file => {
       if (useCloudinary) {
         return file.path;
       }
       return `${req.protocol}://${req.get('host')}/uploads/issues/${file.filename}`;
     });
+    
+    console.log(`📸 [UpdateIssue] Adding ${newImages.length} new images`);
     issue.images = [...issue.images, ...newImages];
   }
   
@@ -297,6 +358,12 @@ export const deleteIssue = asyncHandler(async (req, res) => {
   // Check ownership
   if (issue.reportedBy.toString() !== req.user._id.toString()) {
     throw new ApiError(403, 'Not authorized to delete this issue');
+  }
+  
+  // Delete all associated images from Cloudinary before deleting from database
+  if (issue.images && issue.images.length > 0) {
+    console.log(`🗑️ [DeleteIssue] Deleting ${issue.images.length} images from Cloudinary`);
+    await deleteImagesFromCloudinary(issue.images);
   }
   
   await issue.deleteOne();
