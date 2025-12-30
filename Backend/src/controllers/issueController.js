@@ -8,8 +8,7 @@ import { isOfficialAdmin } from '../utils/officialPermissions.js';
 // Helper function to extract public_id from Cloudinary URL
 const getPublicIdFromUrl = (url) => {
   try {
-    // Example URL: https://res.cloudinary.com/dmvg9skbm/image/upload/v1767029697/citizenvoice/issues/issue-1767029692617-276101587.png
-    // Extract: citizenvoice/issues/issue-1767029692617-276101587
+   
     const parts = url.split('/upload/');
     if (parts.length < 2) return null;
     
