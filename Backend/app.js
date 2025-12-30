@@ -11,6 +11,7 @@ import multer from "multer";
 import fs from "fs";
 import issueRoutes from "./src/routes/issueRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
+import officialRoutes from "./src/routes/officialRoutes.js";
 
 // Load environment variables FIRST
 dotenv.config();
@@ -54,6 +55,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api/auth", authRoutes);
 
 app.use("/api/issues", issueRoutes);
+
+// Official dashboard routes
+app.use("/api/officials", officialRoutes);
 
 // Health check (optional but useful)
 app.get("/", (req, res) => {

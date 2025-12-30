@@ -3,6 +3,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
+import { isOfficialAdmin } from '../utils/officialPermissions.js';
 
 // Helper function to extract public_id from Cloudinary URL
 const getPublicIdFromUrl = (url) => {
@@ -315,8 +316,21 @@ export const updateIssue = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Issue not found');
   }
   
-  // Check ownership or admin rights
-  if (issue.reportedBy.toString() !== req.user._id.toString() && req.user.role !== 'official') {
+  // Permission rules:
+  // - Citizen: can update only their reported issues
+  // - Official admin: can update any issue
+  // - Official (non-admin): can update only issues assigned to them
+  const isAdmin = isOfficialAdmin(req.user);
+  const isReporter = issue.reportedBy?.toString() === req.user._id.toString();
+  const isAssignee = issue.assignedTo?.toString() === req.user._id.toString();
+
+  if (req.user.role === 'citizen') {
+    if (!isReporter) throw new ApiError(403, 'Not authorized to update this issue');
+  } else if (req.user.role === 'official') {
+    if (!isAdmin && !isAssignee) {
+      throw new ApiError(403, 'Not authorized to update this issue');
+    }
+  } else {
     throw new ApiError(403, 'Not authorized to update this issue');
   }
   

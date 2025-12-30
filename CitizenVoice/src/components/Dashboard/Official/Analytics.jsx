@@ -109,22 +109,9 @@ export function Analytics() {
       setLoading(true);
       setError(null);
       
-      // TODO: Backend team - Implement analytics endpoint:
-      // GET /api/officials/analytics?period={dateRange}
-      // Response: { overviewStats, categoryData, monthlyData, departmentData }
-      
-      // Simulating API call with mock data for frontend functionality
-      // const response = await issueService.getAnalytics({ period: dateRange });
-      // setAnalyticsData(response.data || null);
-      
-      // Using mock data until backend is ready
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-      setAnalyticsData({
-        overviewStats: mockOverviewStats,
-        categoryData: mockCategoryData,
-        monthlyData: mockMonthlyData,
-        departmentData: mockDepartmentData,
-      });
+      // Call backend analytics endpoint
+      const response = await issueService.getAnalytics({ period: dateRange });
+      setAnalyticsData(response.data || null);
     } catch (err) {
       console.error("Error loading analytics:", err);
       setError(err.message || "Failed to load analytics");

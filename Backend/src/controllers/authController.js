@@ -6,6 +6,7 @@ import { User } from "../models/userModel.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
+import { isOfficialAdmin } from "../utils/officialPermissions.js";
 
 // Initialize Google OAuth client lazily (after dotenv loads)
 let googleClient = null;
@@ -51,6 +52,8 @@ const sendAuthResponse = (res, statusCode, user, message) => {
     email: user.email,
     role: user.role,
     avatar: user.avatar || null,
+    officialDetails: user.role === 'official' ? (user.officialDetails || {}) : undefined,
+    isOfficialAdmin: isOfficialAdmin(user),
     createdAt: user.createdAt,
   };
 
@@ -178,6 +181,8 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     email: user.email,
     role: user.role,
     avatar: user.avatar || null,
+    officialDetails: user.role === 'official' ? (user.officialDetails || {}) : undefined,
+    isOfficialAdmin: isOfficialAdmin(user),
     createdAt: user.createdAt,
   };
 

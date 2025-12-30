@@ -5,6 +5,7 @@
 ### What's Been Done (Frontend)
 
 ✅ **Complete UI Implementation**
+
 - Issue Management with Kanban and Table views
 - Team Management with workload distribution
 - Analytics with charts and export
@@ -12,6 +13,7 @@
 - All buttons and forms working
 
 ✅ **API Integration Ready**
+
 - All service calls configured in `CitizenVoice/src/services/issueService.js`
 - Error handling and loading states implemented
 - Real-time updates supported
@@ -38,8 +40,8 @@
 
 ```javascript
 // Add this line after existing routes
-import officialRoutes from './src/routes/officialRoutes.js';
-app.use('/api/officials', officialRoutes);
+import officialRoutes from "./src/routes/officialRoutes.js";
+app.use("/api/officials", officialRoutes);
 ```
 
 #### 2. **Update Existing Controllers** (Priority 2)
@@ -47,6 +49,7 @@ app.use('/api/officials', officialRoutes);
 **File:** `Backend/src/controllers/issueController.js` (UPDATE)
 
 Add these new functions:
+
 - `getAssignedIssues`
 - `assignIssue`
 - `getIssuesByStatus`
@@ -143,15 +146,15 @@ Backend/
 
 ### Required Endpoints
 
-| Method | Endpoint | Description | Status |
-|--------|----------|-------------|--------|
-| GET | `/api/officials/team` | Get team members | ❌ Missing |
-| GET | `/api/officials/stats` | Dashboard statistics | ❌ Missing |
-| GET | `/api/officials/analytics` | Analytics data | ❌ Missing |
-| POST | `/api/officials/assign/:issueId` | Assign issue | ❌ Missing |
-| GET | `/api/issues/recent` | Get all issues | ✅ Exists |
-| PUT | `/api/issues/:issueId` | Update issue | ✅ Exists |
-| DELETE | `/api/issues/:issueId` | Delete issue | ✅ Exists |
+| Method | Endpoint                         | Description          | Status     |
+| ------ | -------------------------------- | -------------------- | ---------- |
+| GET    | `/api/officials/team`            | Get team members     | ❌ Missing |
+| GET    | `/api/officials/stats`           | Dashboard statistics | ❌ Missing |
+| GET    | `/api/officials/analytics`       | Analytics data       | ❌ Missing |
+| POST   | `/api/officials/assign/:issueId` | Assign issue         | ❌ Missing |
+| GET    | `/api/issues/recent`             | Get all issues       | ✅ Exists  |
+| PUT    | `/api/issues/:issueId`           | Update issue         | ✅ Exists  |
+| DELETE | `/api/issues/:issueId`           | Delete issue         | ✅ Exists  |
 
 ---
 
@@ -167,10 +170,36 @@ MONGODB_URI=mongodb://localhost:27017/citizenvoice
 PORT=3000
 JWT_SECRET=your_secret_key
 
+# Official Dashboard (Single privileged official)
+# This ONE email will be allowed to:
+# - assign issues
+# - manage team members
+# Other officials will only see their assigned issues.
+OFFICIAL_ADMIN_EMAIL=teamlead@officials.gov
+
+# Optional: only needed if you use the seed script below
+OFFICIAL_ADMIN_PASSWORD=change_me
+
 # Optional for Official Dashboard
 ANALYTICS_CACHE_TTL=3600
 MAX_TEAM_MEMBERS=50
 ```
+
+### Seed the privileged official (recommended)
+
+From the `Backend/` folder:
+
+```bash
+npm run seed:official-admin
+```
+
+This script reads:
+
+- `MONGO_URI`
+- `OFFICIAL_ADMIN_EMAIL`
+- `OFFICIAL_ADMIN_PASSWORD`
+
+and creates/updates an `official` user with designation `team-lead`.
 
 ---
 
@@ -186,15 +215,17 @@ MAX_TEAM_MEMBERS=50
 ## 🐛 Common Issues & Solutions
 
 **Issue:** "Only officials can access this endpoint"
+
 ```javascript
 // Solution: Ensure user has role: "official" in database
 db.users.updateOne(
   { email: "user@example.com" },
   { $set: { role: "official" } }
-)
+);
 ```
 
 **Issue:** Empty team members array
+
 ```javascript
 // Solution: Create official users
 db.users.insertOne({
@@ -204,21 +235,24 @@ db.users.insertOne({
   role: "official",
   officialDetails: {
     department: "Roads & Infrastructure",
-    designation: "Field Officer"
+    designation: "Field Officer",
   },
   status: "active",
-  isActive: true
-})
+  isActive: true,
+});
 ```
 
 **Issue:** Analytics returns no data
+
 ```javascript
 // Solution: Ensure issues exist with createdAt within date range
-db.issues.find({ 
-  createdAt: { 
-    $gte: new Date(Date.now() - 30*24*60*60*1000) 
-  } 
-}).count()
+db.issues
+  .find({
+    createdAt: {
+      $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    },
+  })
+  .count();
 ```
 
 ---

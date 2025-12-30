@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { issueService } from "../../../services/issueService";
+import { useAuth } from "../../../context/AuthContext";
 
 // Status configuration - Updated to match backend statuses
 const statusConfig = {
@@ -49,6 +50,9 @@ const priorityConfig = {
 };
 
 export function IssueManagement({ viewMode = "kanban" }) {
+  const { user } = useAuth();
+  const isOfficialAdmin = !!user?.isOfficialAdmin;
+
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -62,83 +66,24 @@ export function IssueManagement({ viewMode = "kanban" }) {
   // Fetch issues on component mount
   useEffect(() => {
     loadIssues();
-    loadTeamMembers();
-  }, []);
+    if (isOfficialAdmin) {
+      loadTeamMembers();
+    } else {
+      setTeamMembers([]);
+    }
+  }, [isOfficialAdmin]);
 
   const loadIssues = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // TODO: Backend team - Implement issues endpoint:
-      // GET /api/issues/recent
-      // Response: { issues: [...] }
-      
-      // Uncomment when backend is ready:
-      // const response = await issueService.getIssues();
-      // const issuesData = response.data?.issues || response.issues || [];
-      // setIssues(issuesData);
-      
-      // Using mock data until backend is ready
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const mockIssues = [
-        {
-          _id: "1",
-          issueId: "ISS-001",
-          title: "Large pothole causing accidents on Main Street",
-          description: "Dangerous pothole near intersection",
-          status: "reported",
-          priority: "high",
-          location: { address: "123 Main Street" },
-          createdAt: new Date().toISOString(),
-          assignedTo: null,
-        },
-        {
-          _id: "2",
-          issueId: "ISS-002",
-          title: "Street light not working",
-          description: "Dark area at night",
-          status: "acknowledged",
-          priority: "medium",
-          location: { address: "45 Oak Avenue" },
-          createdAt: new Date().toISOString(),
-          assignedTo: { _id: "1", username: "John Doe" },
-        },
-        {
-          _id: "3",
-          issueId: "ISS-003",
-          title: "Garbage collection missed",
-          description: "Trash piling up",
-          status: "in-progress",
-          priority: "medium",
-          location: { address: "78 Pine Road" },
-          createdAt: new Date().toISOString(),
-          assignedTo: { _id: "2", username: "Sarah Wilson" },
-        },
-        {
-          _id: "4",
-          issueId: "ISS-004",
-          title: "Water main leak flooding street",
-          description: "Emergency repair needed",
-          status: "in-progress",
-          priority: "high",
-          location: { address: "90 Elm Street" },
-          createdAt: new Date().toISOString(),
-          assignedTo: { _id: "1", username: "John Doe" },
-        },
-        {
-          _id: "5",
-          issueId: "ISS-005",
-          title: "Traffic signal malfunction",
-          description: "Safety hazard",
-          status: "resolved",
-          priority: "high",
-          location: { address: "Main & 5th Intersection" },
-          createdAt: new Date().toISOString(),
-          assignedTo: { _id: "3", username: "Mike Chen" },
-        },
-      ];
-      setIssues(mockIssues);
+      // Admin: global recent issues; Regular official: assigned issues only
+      const response = isOfficialAdmin
+        ? await issueService.getIssues()
+        : await issueService.getAssignedIssues();
+      const issuesData = response.data?.issues || response.issues || [];
+      setIssues(issuesData);
     } catch (err) {
       console.error("Error loading issues:", err);
       setError(err.message || "Failed to load issues");
@@ -149,21 +94,10 @@ export function IssueManagement({ viewMode = "kanban" }) {
 
   const loadTeamMembers = async () => {
     try {
-      // TODO: Backend team - Implement team members endpoint:
-      // GET /api/officials/team
-      // Response: { members: [...] }
-      
-      // Uncomment when backend is ready:
-      // const response = await issueService.getTeamMembers();
-      // setTeamMembers(response.data?.members || []);
-      
-      // Use mock team members until backend is ready
-      setTeamMembers([
-        { _id: "1", username: "John Doe", role: "Field Officer" },
-        { _id: "2", username: "Sarah Wilson", role: "Team Lead" },
-        { _id: "3", username: "Mike Chen", role: "Field Officer" },
-        { _id: "4", username: "Emily Davis", role: "Field Officer" },
-      ]);
+      if (!isOfficialAdmin) return;
+      // Fetch team members from backend
+      const response = await issueService.getTeamMembers();
+      setTeamMembers(response.data?.members || []);
     } catch (err) {
       console.error("Error loading team members:", err);
       setTeamMembers([]);
@@ -214,15 +148,8 @@ export function IssueManagement({ viewMode = "kanban" }) {
     try {
       setUpdating(true);
       
-      // TODO: Backend team - Implement update issue endpoint:
-      // PUT /api/issues/:id
-      // Body: { status: newStatus }
-      
-      // Uncomment when backend is ready:
-      // await issueService.updateIssue(issueId, { status: newStatus });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Update issue status via backend
+      await issueService.updateIssue(issueId, { status: newStatus });
       
       // Update local state
       setIssues((prev) =>
@@ -231,7 +158,6 @@ export function IssueManagement({ viewMode = "kanban" }) {
         )
       );
       
-      // Show success feedback
       console.log(`Issue ${issueId} status updated to ${newStatus}`);
     } catch (err) {
       console.error("Error updating status:", err);
@@ -245,21 +171,14 @@ export function IssueManagement({ viewMode = "kanban" }) {
     try {
       setUpdating(true);
       
-      // TODO: Backend team - Implement assign issue endpoint:
-      // PATCH /api/officials/assign/:issueId
-      // Body: { memberId: member._id }
-      
-      // Uncomment when backend is ready:
-      // await issueService.assignIssue(issueId, member._id);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Assign issue via backend
+      await issueService.assignIssue(issueId, member._id);
       
       // Update local state
       setIssues((prev) =>
         prev.map((issue) =>
           issue._id === issueId
-            ? { ...issue, assignedTo: member, status: "acknowledged" }
+            ? { ...issue, assignedTo: member, status: "in-progress" }
             : issue
         )
       );
@@ -281,14 +200,8 @@ export function IssueManagement({ viewMode = "kanban" }) {
     try {
       setUpdating(true);
       
-      // TODO: Backend team - Implement delete issue endpoint:
-      // DELETE /api/issues/:id
-      
-      // Uncomment when backend is ready:
-      // await issueService.deleteIssue(issueId);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Delete issue via backend
+      await issueService.deleteIssue(issueId);
       
       setIssues((prev) => prev.filter((issue) => issue._id !== issueId));
       console.log(`Issue ${issueId} deleted successfully`);
@@ -415,16 +328,20 @@ export function IssueManagement({ viewMode = "kanban" }) {
                           </span>
                         </div>
                       ) : (
-                        <button
-                          onClick={() => {
-                            setSelectedIssue(issue);
-                            setShowAssignModal(true);
-                          }}
-                          className="text-xs text-rose-400 hover:text-rose-300"
-                          disabled={updating}
-                        >
-                          Assign
-                        </button>
+                        isOfficialAdmin ? (
+                          <button
+                            onClick={() => {
+                              setSelectedIssue(issue);
+                              setShowAssignModal(true);
+                            }}
+                            className="text-xs text-rose-400 hover:text-rose-300"
+                            disabled={updating}
+                          >
+                            Assign
+                          </button>
+                        ) : (
+                          <span className="text-xs text-white/30">Unassigned</span>
+                        )
                       )}
                       <div className="flex items-center gap-1">
                         <button
@@ -548,16 +465,20 @@ export function IssueManagement({ viewMode = "kanban" }) {
                         </span>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => {
-                          setSelectedIssue(issue);
-                          setShowAssignModal(true);
-                        }}
-                        disabled={updating}
-                        className="text-xs text-rose-400 hover:text-rose-300"
-                      >
-                        Assign
-                      </button>
+                      isOfficialAdmin ? (
+                        <button
+                          onClick={() => {
+                            setSelectedIssue(issue);
+                            setShowAssignModal(true);
+                          }}
+                          disabled={updating}
+                          className="text-xs text-rose-400 hover:text-rose-300"
+                        >
+                          Assign
+                        </button>
+                      ) : (
+                        <span className="text-xs text-white/30">Unassigned</span>
+                      )
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-white/40">

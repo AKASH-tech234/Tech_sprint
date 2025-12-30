@@ -8,7 +8,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "seed:official-admin": "node src/scripts/seedOfficialAdmin.js"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

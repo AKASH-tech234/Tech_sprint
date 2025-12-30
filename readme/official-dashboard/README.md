@@ -16,23 +16,27 @@ This directory contains comprehensive documentation for implementing the backend
 The Official Dashboard requires the following main features:
 
 ### 1. **Issue Management**
+
 - Get all issues with filters
 - Update issue status
 - Assign issues to team members
 - Delete issues
 
 ### 2. **Team Management**
+
 - Get team members list
 - View team member details
 - Track team workload and performance
 
 ### 3. **Analytics**
+
 - Overview statistics
 - Category-wise breakdown
 - Monthly trends
 - Department performance
 
 ### 4. **Map Integration**
+
 - Get issues by location/bounds
 - Filter by status and category
 - Real-time updates
@@ -40,19 +44,30 @@ The Official Dashboard requires the following main features:
 ## Frontend Integration
 
 The frontend is already configured to call these endpoints. See:
+
 - `CitizenVoice/src/services/issueService.js` - All API service calls
 - `CitizenVoice/src/components/Dashboard/Official/*` - Dashboard components
 
 ## Current Implementation Status
 
 ✅ **Frontend Complete**
+
 - All UI components implemented
 - API integration ready
 - Error handling in place
 
-
 ⚠️ **Backend Required**
+
 - Issue CRUD operations (partial)
 - Team management endpoints (missing)
 - Analytics endpoints (missing)
 - Official-specific routes (missing)
+
+## Privileged Official (Single Admin Email)
+
+The backend supports a **single privileged official** for sensitive actions like assigning issues and managing team members.
+
+- Set `OFFICIAL_ADMIN_EMAIL` in the backend environment to the one official email allowed to assign/manage team.
+- All other officials can still access the dashboard but will only see issues assigned to them.
+
+Optional: run `npm run seed:official-admin` (in `Backend/`) to create/update that official user from env vars.

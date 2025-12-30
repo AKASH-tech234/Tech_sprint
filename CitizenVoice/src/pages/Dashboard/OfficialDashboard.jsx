@@ -1,5 +1,5 @@
 // src/pages/Dashboard/OfficialDashboard.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "../../components/Dashboard/Shared/DashboardLayout";
 import { StatsCard } from "../../components/Dashboard/Shared/StatsCard";
@@ -7,6 +7,7 @@ import { IssueManagement } from "../../components/Dashboard/Official/issuemanagm
 import { TeamManagement } from "../../components/Dashboard/Official/Teammanagement";
 import { Analytics } from "../../components/Dashboard/Official/Analytics";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
+import { issueService } from "../../services/issueService";
 import {
   Inbox,
   Users,
@@ -16,51 +17,64 @@ import {
   ArrowRight,
   MapPin,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 
-// Mock stats
+// Mock stats (fallback)
 const mockStats = {
   pending: 23,
   assigned: 12,
   resolvedToday: 8,
   avgTime: "2.4 days",
+  todayActivity: {
+    received: 15,
+    resolved: 8,
+    inProgress: 12,
+    escalated: 2,
+  },
+  priorityIssues: [
+    {
+      issueId: "ISS-005",
+      title: "Traffic signal malfunction at Main & 5th",
+      priority: "high",
+      status: "reported",
+      location: "Main & 5th Intersection",
+      createdAt: "2 hours ago",
+    },
+    {
+      issueId: "ISS-001",
+      title: "Large pothole causing accidents",
+      priority: "high",
+      status: "in-progress",
+      location: "123 Main Street",
+      createdAt: "3 days ago",
+    },
+  ],
 };
-
-// Mock priority issues
-const mockPriorityIssues = [
-  {
-    id: "ISS-005",
-    title: "Traffic signal malfunction at Main & 5th",
-    priority: "high",
-    status: "new",
-    location: "Main & 5th Intersection",
-    reporter: "Chris Lee",
-    createdAt: "2 hours ago",
-  },
-  {
-    id: "ISS-001",
-    title: "Large pothole causing accidents",
-    priority: "high",
-    status: "in-progress",
-    location: "123 Main Street",
-    reporter: "Jane Smith",
-    createdAt: "3 days ago",
-  },
-  {
-    id: "ISS-008",
-    title: "Water main leak flooding street",
-    priority: "high",
-    status: "new",
-    location: "45 Oak Avenue",
-    reporter: "Mike Johnson",
-    createdAt: "5 hours ago",
-  },
-];
 
 // Dashboard Home Component
 function DashboardHome() {
   const navigate = useNavigate();
-  const [priorityFilter, setPriorityFilter] = React.useState("high");
+  const [priorityFilter, setPriorityFilter] = useState("high");
+  const [stats, setStats] = useState(mockStats);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const response = await issueService.getOfficialStats();
+      setStats(response.data || mockStats);
+    } catch (err) {
+      console.error("Error loading stats:", err);
+      setStats(mockStats);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTakeAction = (issue) => {
     // Navigate to issue management with the issue pre-selected
@@ -68,20 +82,15 @@ function DashboardHome() {
   };
 
   const handleQuickAction = (action) => {
-    // TODO: Backend team - Implement these endpoints:
-    // POST /api/officials/work-order - Create work order
-    // POST /api/officials/schedule-inspection - Schedule inspection
-    // POST /api/officials/request-resources - Request resources
-    // POST /api/officials/generate-report - Generate report
-    
-    alert(`${action} functionality will be implemented by the backend team.\n\nRequired endpoint: See component comments.`);
+    alert(`${action} functionality coming soon.`);
   };
 
   // Filter priority issues based on selected filter
-  const filteredPriorityIssues = mockPriorityIssues.filter((issue) => {
+  const priorityIssues = stats.priorityIssues || [];
+  const filteredPriorityIssues = priorityIssues.filter((issue) => {
     if (priorityFilter === "high") return issue.priority === "high";
     if (priorityFilter === "overdue") return false; // TODO: Add overdue logic
-    if (priorityFilter === "new") return issue.status === "new";
+    if (priorityFilter === "new") return issue.status === "reported";
     return true;
   });
 
@@ -101,21 +110,21 @@ function DashboardHome() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Pending Issues"
-          value={mockStats.pending}
+          value={loading ? "..." : stats.pending}
           icon={Inbox}
           color="amber"
           onClick={() => navigate("/dashboard/official/assigned")}
         />
         <StatsCard
           title="Assigned to Me"
-          value={mockStats.assigned}
+          value={loading ? "..." : stats.assigned}
           icon={Users}
           color="violet"
           onClick={() => navigate("/dashboard/official/assigned")}
         />
         <StatsCard
           title="Resolved Today"
-          value={mockStats.resolvedToday}
+          value={loading ? "..." : stats.resolvedToday}
           icon={CheckCircle2}
           color="emerald"
           trend="up"
@@ -124,7 +133,7 @@ function DashboardHome() {
         />
         <StatsCard
           title="Avg. Resolution Time"
-          value={mockStats.avgTime}
+          value={loading ? "..." : stats.avgTime}
           icon={Clock}
           color="cyan"
           trend="up"
@@ -174,7 +183,7 @@ function DashboardHome() {
           {filteredPriorityIssues.length > 0 ? (
             filteredPriorityIssues.map((issue) => (
               <div
-                key={issue.id}
+                key={issue._id || issue.issueId}
                 className="flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 transition-all hover:bg-rose-500/20"
               >
                 <div className="flex items-start gap-4">
@@ -183,10 +192,10 @@ function DashboardHome() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-white/40">{issue.id}</span>
+                      <span className="text-xs text-white/40">{issue.issueId}</span>
                       <span
                         className={`rounded px-1.5 py-0.5 text-xs ${
-                          issue.status === "new"
+                          issue.status === "reported"
                             ? "bg-gray-500/20 text-gray-400"
                             : "bg-amber-500/20 text-amber-400"
                         }`}
@@ -198,10 +207,10 @@ function DashboardHome() {
                     <div className="mt-1 flex items-center gap-3 text-xs text-white/40">
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {issue.location}
+                        {typeof issue.location === 'string' ? issue.location : issue.location?.address || 'Unknown'}
                       </span>
                       <span>•</span>
-                      <span>{issue.createdAt}</span>
+                      <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
@@ -232,19 +241,19 @@ function DashboardHome() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-white/60">Issues Received</span>
-              <span className="font-semibold text-white">15</span>
+              <span className="font-semibold text-white">{loading ? "..." : stats.todayActivity?.received || 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-white/60">Issues Resolved</span>
-              <span className="font-semibold text-emerald-400">8</span>
+              <span className="font-semibold text-emerald-400">{loading ? "..." : stats.todayActivity?.resolved || 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-white/60">In Progress</span>
-              <span className="font-semibold text-amber-400">12</span>
+              <span className="font-semibold text-amber-400">{loading ? "..." : stats.todayActivity?.inProgress || 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-white/60">Escalated</span>
-              <span className="font-semibold text-rose-400">2</span>
+              <span className="font-semibold text-rose-400">{loading ? "..." : stats.todayActivity?.escalated || 0}</span>
             </div>
           </div>
         </div>

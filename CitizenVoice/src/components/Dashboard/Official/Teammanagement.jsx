@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { issueService } from "../../../services/issueService";
+import { useAuth } from "../../../context/AuthContext";
 
 // Mock team data (fallback)
 const mockTeamMembers = [
@@ -97,6 +98,9 @@ const statusColors = {
 };
 
 export function TeamManagement() {
+  const { user } = useAuth();
+  const isOfficialAdmin = !!user?.isOfficialAdmin;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMember, setSelectedMember] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -111,6 +115,20 @@ export function TeamManagement() {
   });
   const [saving, setSaving] = useState(false);
 
+  if (!isOfficialAdmin) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-rose-500 mx-auto mb-4" />
+          <p className="text-rose-400 mb-2">Access denied</p>
+          <p className="text-white/60 text-sm">
+            Only the team lead can manage members.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     loadTeamMembers();
   }, []);
@@ -120,18 +138,10 @@ export function TeamManagement() {
       setLoading(true);
       setError(null);
       
-      // TODO: Backend team - Implement team members endpoint:
-      // GET /api/officials/team
-      // Response: { members: [...] }
-      
-      // Uncomment when backend is ready:
-      // const response = await issueService.getTeamMembers();
-      // const members = response.data?.members || [];
-      // setTeamMembers(members.length > 0 ? members : mockTeamMembers);
-      
-      // Using mock data until backend is ready
-      await new Promise(resolve => setTimeout(resolve, 600));
-      setTeamMembers(mockTeamMembers);
+      // Fetch team members from backend
+      const response = await issueService.getTeamMembers();
+      const members = response.data?.members || [];
+      setTeamMembers(members.length > 0 ? members : mockTeamMembers);
     } catch (err) {
       console.error("Error loading team members:", err);
       setError(err.message || "Failed to load team members");
@@ -163,37 +173,23 @@ export function TeamManagement() {
     try {
       setSaving(true);
       
-      // TODO: Backend team - Implement add team member endpoint:
-      // POST /api/officials/team
-      // Body: { name, email, phone, role }
-      
-      // Uncomment when backend is ready:
-      // const response = await issueService.addTeamMember(newMember);
-      // setTeamMembers([...teamMembers, response.data.member]);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Add new member to local state
-      const newMemberData = {
+      // Add team member via backend
+      const response = await issueService.addTeamMember(newMember);
+      const addedMember = response.data?.member || {
         id: teamMembers.length + 1,
         _id: `${teamMembers.length + 1}`,
         ...newMember,
         username: newMember.name,
         avatar: newMember.name.substring(0, 2).toUpperCase(),
         status: "active",
-        stats: {
-          assigned: 0,
-          completed: 0,
-          avgTime: "0 days",
-        },
+        stats: { assigned: 0, completed: 0, avgTime: "0 days" },
         recentIssues: [],
       };
       
-      setTeamMembers([...teamMembers, newMemberData]);
+      setTeamMembers([...teamMembers, addedMember]);
       setShowAddModal(false);
       setNewMember({ name: "", email: "", phone: "", role: "field-officer" });
-      console.log("Team member added successfully:", newMemberData);
+      console.log("Team member added successfully:", addedMember);
     } catch (err) {
       console.error("Error adding team member:", err);
       alert("Failed to add team member. Please try again.");
@@ -206,14 +202,8 @@ export function TeamManagement() {
     if (!confirm("Are you sure you want to remove this team member?")) return;
     
     try {
-      // TODO: Backend team - Implement remove team member endpoint:
-      // DELETE /api/officials/team/:memberId
-      
-      // Uncomment when backend is ready:
-      // await issueService.removeTeamMember(memberId);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Remove team member via backend
+      await issueService.removeTeamMember(memberId);
       
       setTeamMembers(teamMembers.filter((m) => (m.id || m._id) !== memberId));
       setSelectedMember(null);

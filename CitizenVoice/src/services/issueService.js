@@ -17,7 +17,7 @@ class IssueService {
   // Create a new issue
   async createIssue(formData) {
     // formData is already a FormData object passed from the component
-    const response = await fetch(`${API_BASE_URL}/api/issues/create`, {
+    const response = await fetch(`${API_BASE_URL}/issues/create`, {
       method: "POST",
       credentials: "include",
       body: formData,
@@ -35,7 +35,7 @@ class IssueService {
   // Get all issues with filters
   async getIssues(filters = {}) {
     const params = new URLSearchParams(filters);
-    const response = await fetch(`${API_BASE_URL}/api/issues/recent?${params}`, {
+    const response = await fetch(`${API_BASE_URL}/issues/recent?${params}`, {
       credentials: "include",
     });
 
@@ -49,7 +49,7 @@ class IssueService {
   // Get user's own issues
   async getMyIssues(filters = {}) {
     const params = new URLSearchParams(filters);
-    const response = await fetch(`${API_BASE_URL}/api/issues/my-issues?${params}`, {
+    const response = await fetch(`${API_BASE_URL}/issues/my-issues?${params}`, {
       credentials: "include",
     });
 
@@ -62,7 +62,7 @@ class IssueService {
 
   // Get single issue by ID
   async getIssue(id) {
-    const response = await fetch(`${API_BASE_URL}/api/issues/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/issues/${id}`, {
       credentials: "include",
     });
 
@@ -93,7 +93,7 @@ class IssueService {
       requestOptions.body = updateData;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/issues/${id}`, requestOptions);
+    const response = await fetch(`${API_BASE_URL}/issues/${id}`, requestOptions);
 
     if (!response.ok) {
       throw new Error("Failed to update issue");
@@ -104,7 +104,7 @@ class IssueService {
 
   // Delete issue
   async deleteIssue(id) {
-    const response = await fetch(`${API_BASE_URL}/api/issues/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/issues/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -118,7 +118,7 @@ class IssueService {
 
   // Upvote an issue
   async upvoteIssue(id) {
-    const response = await fetch(`${API_BASE_URL}/api/issues/${id}/upvote`, {
+    const response = await fetch(`${API_BASE_URL}/issues/${id}/upvote`, {
       method: "POST",
       credentials: "include",
     });
@@ -132,7 +132,7 @@ class IssueService {
 
   // Add comment to issue
   async addComment(id, comment) {
-    const response = await fetch(`${API_BASE_URL}/api/issues/${id}/comment`, {
+    const response = await fetch(`${API_BASE_URL}/issues/${id}/comment`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -150,7 +150,7 @@ class IssueService {
 
   // Get dashboard statistics for citizen
   async getCitizenStats() {
-    const response = await fetch(`${API_BASE_URL}/api/issues/stats/citizen`, {
+    const response = await fetch(`${API_BASE_URL}/issues/stats/citizen`, {
       credentials: "include",
     });
 
@@ -163,7 +163,7 @@ class IssueService {
 
   // Get dashboard statistics for officials
   async getOfficialStats() {
-    const response = await fetch(`${API_BASE_URL}/api/officials/stats`, {
+    const response = await fetch(`${API_BASE_URL}/officials/stats`, {
       credentials: "include",
     });
 
@@ -178,7 +178,7 @@ class IssueService {
   async getAssignedIssues(filters = {}) {
     const params = new URLSearchParams(filters);
     const response = await fetch(
-      `${API_BASE_URL}/api/officials/assigned?${params}`,
+      `${API_BASE_URL}/officials/assigned?${params}`,
       {
         credentials: "include",
       }
@@ -194,7 +194,7 @@ class IssueService {
   // Assign issue to team member
   async assignIssue(issueId, memberId) {
     const response = await fetch(
-      `${API_BASE_URL}/api/officials/assign/${issueId}`,
+      `${API_BASE_URL}/officials/assign/${issueId}`,
       {
         method: "PATCH",
         credentials: "include",
@@ -214,7 +214,7 @@ class IssueService {
 
   // Get team members
   async getTeamMembers() {
-    const response = await fetch(`${API_BASE_URL}/api/officials/team`, {
+    const response = await fetch(`${API_BASE_URL}/officials/team`, {
       credentials: "include",
     });
 
@@ -225,11 +225,43 @@ class IssueService {
     return response.json();
   }
 
+  // Add team member
+  async addTeamMember(memberData) {
+    const response = await fetch(`${API_BASE_URL}/officials/team`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(memberData),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to add team member");
+    }
+
+    return response.json();
+  }
+
+  // Remove team member
+  async removeTeamMember(memberId) {
+    const response = await fetch(`${API_BASE_URL}/officials/team/${memberId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to remove team member");
+    }
+
+    return response.json();
+  }
+
   // Get analytics data
   async getAnalytics(filters = {}) {
     const params = new URLSearchParams(filters);
     const response = await fetch(
-      `${API_BASE_URL}/api/officials/analytics?${params}`,
+      `${API_BASE_URL}/officials/analytics?${params}`,
       {
         credentials: "include",
       }
@@ -246,7 +278,7 @@ class IssueService {
   async getAreaIssues(areaId, filters = {}) {
     const params = new URLSearchParams(filters);
     const response = await fetch(
-      `${API_BASE_URL}/api/community/area/${areaId}?${params}`,
+      `${API_BASE_URL}/community/area/${areaId}?${params}`,
       {
         credentials: "include",
       }
@@ -262,7 +294,7 @@ class IssueService {
   // Community: Get verification queue
   async getVerificationQueue() {
     const response = await fetch(
-      `${API_BASE_URL}/api/community/verification-queue`,
+      `${API_BASE_URL}/community/verification-queue`,
       {
         credentials: "include",
       }
@@ -277,7 +309,7 @@ class IssueService {
 
   // Community: Verify issue resolution
   async verifyResolution(id, verificationData) {
-    const response = await fetch(`${API_BASE_URL}/api/community/verify/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/community/verify/${id}`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -295,7 +327,7 @@ class IssueService {
 
   // Community: Get community stats
   async getCommunityStats() {
-    const response = await fetch(`${API_BASE_URL}/api/community/stats`, {
+    const response = await fetch(`${API_BASE_URL}/community/stats`, {
       credentials: "include",
     });
 
@@ -309,7 +341,7 @@ class IssueService {
   // Get all issues for heatmap (with filtering)
   async getAllIssues(filters = {}) {
     const params = new URLSearchParams(filters);
-    const response = await fetch(`${API_BASE_URL}/api/issues/all?${params}`, {
+    const response = await fetch(`${API_BASE_URL}/issues/all?${params}`, {
       credentials: "include",
     });
 

@@ -82,7 +82,12 @@ const menuConfig = {
 export function Sidebar({ isOpen, onClose, role = "citizen" }) {
   const location = useLocation();
   const { user } = useAuth();
-  const menuItems = menuConfig[role] || menuConfig.citizen;
+  const isOfficialAdmin = !!user?.isOfficialAdmin;
+  const menuItemsRaw = menuConfig[role] || menuConfig.citizen;
+  const menuItems =
+    role === 'official' && !isOfficialAdmin
+      ? menuItemsRaw.filter((item) => item.path !== '/dashboard/official/team')
+      : menuItemsRaw;
 
   const isActive = (path) => {
     if (path === `/dashboard/${role}`) {
