@@ -60,6 +60,30 @@ const mockPriorityIssues = [
 // Dashboard Home Component
 function DashboardHome() {
   const navigate = useNavigate();
+  const [priorityFilter, setPriorityFilter] = React.useState("high");
+
+  const handleTakeAction = (issue) => {
+    // Navigate to issue management with the issue pre-selected
+    navigate("/dashboard/official/assigned", { state: { selectedIssue: issue } });
+  };
+
+  const handleQuickAction = (action) => {
+    // TODO: Backend team - Implement these endpoints:
+    // POST /api/officials/work-order - Create work order
+    // POST /api/officials/schedule-inspection - Schedule inspection
+    // POST /api/officials/request-resources - Request resources
+    // POST /api/officials/generate-report - Generate report
+    
+    alert(`${action} functionality will be implemented by the backend team.\n\nRequired endpoint: See component comments.`);
+  };
+
+  // Filter priority issues based on selected filter
+  const filteredPriorityIssues = mockPriorityIssues.filter((issue) => {
+    if (priorityFilter === "high") return issue.priority === "high";
+    if (priorityFilter === "overdue") return false; // TODO: Add overdue logic
+    if (priorityFilter === "new") return issue.status === "new";
+    return true;
+  });
 
   return (
     <div className="space-y-8">
@@ -80,12 +104,14 @@ function DashboardHome() {
           value={mockStats.pending}
           icon={Inbox}
           color="amber"
+          onClick={() => navigate("/dashboard/official/assigned")}
         />
         <StatsCard
           title="Assigned to Me"
           value={mockStats.assigned}
           icon={Users}
           color="violet"
+          onClick={() => navigate("/dashboard/official/assigned")}
         />
         <StatsCard
           title="Resolved Today"
@@ -94,6 +120,7 @@ function DashboardHome() {
           color="emerald"
           trend="up"
           trendValue={15}
+          onClick={() => navigate("/dashboard/official/analytics")}
         />
         <StatsCard
           title="Avg. Resolution Time"
@@ -102,6 +129,7 @@ function DashboardHome() {
           color="cyan"
           trend="up"
           trendValue={8}
+          onClick={() => navigate("/dashboard/official/analytics")}
         />
       </div>
 
@@ -110,56 +138,86 @@ function DashboardHome() {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-white">Priority Queue</h2>
           <div className="flex gap-2">
-            <button className="rounded-full bg-rose-500/20 px-3 py-1 text-xs text-rose-400">
+            <button 
+              onClick={() => setPriorityFilter("high")}
+              className={`rounded-full px-3 py-1 text-xs transition-all ${
+                priorityFilter === "high"
+                  ? "bg-rose-500/20 text-rose-400"
+                  : "bg-white/10 text-white/60 hover:bg-white/20"
+              }`}
+            >
               High Priority
             </button>
-            <button className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/60 hover:bg-white/20">
+            <button 
+              onClick={() => setPriorityFilter("overdue")}
+              className={`rounded-full px-3 py-1 text-xs transition-all ${
+                priorityFilter === "overdue"
+                  ? "bg-rose-500/20 text-rose-400"
+                  : "bg-white/10 text-white/60 hover:bg-white/20"
+              }`}
+            >
               Overdue
             </button>
-            <button className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/60 hover:bg-white/20">
+            <button 
+              onClick={() => setPriorityFilter("new")}
+              className={`rounded-full px-3 py-1 text-xs transition-all ${
+                priorityFilter === "new"
+                  ? "bg-rose-500/20 text-rose-400"
+                  : "bg-white/10 text-white/60 hover:bg-white/20"
+              }`}
+            >
               New
             </button>
           </div>
         </div>
         <div className="space-y-3">
-          {mockPriorityIssues.map((issue) => (
-            <div
-              key={issue.id}
-              className="flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 transition-all hover:bg-rose-500/20"
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/20">
-                  <AlertTriangle className="h-5 w-5 text-rose-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-white/40">{issue.id}</span>
-                    <span
-                      className={`rounded px-1.5 py-0.5 text-xs ${
-                        issue.status === "new"
-                          ? "bg-gray-500/20 text-gray-400"
-                          : "bg-amber-500/20 text-amber-400"
-                      }`}
-                    >
-                      {issue.status}
-                    </span>
+          {filteredPriorityIssues.length > 0 ? (
+            filteredPriorityIssues.map((issue) => (
+              <div
+                key={issue.id}
+                className="flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 transition-all hover:bg-rose-500/20"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/20">
+                    <AlertTriangle className="h-5 w-5 text-rose-400" />
                   </div>
-                  <h4 className="font-medium text-white">{issue.title}</h4>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-white/40">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {issue.location}
-                    </span>
-                    <span>•</span>
-                    <span>{issue.createdAt}</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-white/40">{issue.id}</span>
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-xs ${
+                          issue.status === "new"
+                            ? "bg-gray-500/20 text-gray-400"
+                            : "bg-amber-500/20 text-amber-400"
+                        }`}
+                      >
+                        {issue.status}
+                      </span>
+                    </div>
+                    <h4 className="font-medium text-white">{issue.title}</h4>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-white/40">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {issue.location}
+                      </span>
+                      <span>•</span>
+                      <span>{issue.createdAt}</span>
+                    </div>
                   </div>
                 </div>
+                <button 
+                  onClick={() => handleTakeAction(issue)}
+                  className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-rose-600"
+                >
+                  Take Action
+                </button>
               </div>
-              <button className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-rose-600">
-                Take Action
-              </button>
+            ))
+          ) : (
+            <div className="text-center py-8 text-white/40">
+              No issues in this category
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -258,7 +316,8 @@ function DashboardHome() {
           ].map((action) => (
             <button
               key={action.label}
-              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-rose-500/30 hover:bg-white/10"
+              onClick={() => handleQuickAction(action.label)}
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-rose-500/30 hover:bg-white/10 hover:scale-105"
             >
               <span className="text-2xl">{action.icon}</span>
               <span className="text-sm font-medium text-white">
@@ -298,6 +357,28 @@ function MapPage() {
 
 // Settings placeholder
 function SettingsPage() {
+  const [department, setDepartment] = React.useState("Roads & Infrastructure");
+  const [notifications, setNotifications] = React.useState({
+    newAssignments: true,
+    statusUpdates: true,
+    teamMessages: true,
+    dailySummary: true,
+  });
+  const [saving, setSaving] = React.useState(false);
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    
+    // TODO: Backend team - Implement settings endpoint:
+    // PATCH /api/officials/settings
+    // Body: { department, notifications }
+    
+    setTimeout(() => {
+      setSaving(false);
+      alert("Settings saved successfully!\n\nNote: Backend integration pending.");
+    }, 1000);
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Settings</h1>
@@ -310,8 +391,9 @@ function SettingsPage() {
             <label className="block text-sm text-white/60">Department</label>
             <input
               type="text"
-              defaultValue="Roads & Infrastructure"
-              className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white outline-none focus:border-rose-500/50"
             />
           </div>
           <div>
@@ -320,22 +402,35 @@ function SettingsPage() {
             </label>
             <div className="mt-2 space-y-2">
               {[
-                "New issue assignments",
-                "Status updates",
-                "Team messages",
-                "Daily summary",
+                { key: "newAssignments", label: "New issue assignments" },
+                { key: "statusUpdates", label: "Status updates" },
+                { key: "teamMessages", label: "Team messages" },
+                { key: "dailySummary", label: "Daily summary" },
               ].map((item) => (
-                <label key={item} className="flex items-center gap-2">
+                <label key={item.key} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    defaultChecked
-                    className="rounded border-white/20 bg-white/5 text-rose-500"
+                    checked={notifications[item.key]}
+                    onChange={(e) =>
+                      setNotifications({
+                        ...notifications,
+                        [item.key]: e.target.checked,
+                      })
+                    }
+                    className="rounded border-white/20 bg-white/5 text-rose-500 cursor-pointer"
                   />
-                  <span className="text-sm text-white/80">{item}</span>
+                  <span className="text-sm text-white/80">{item.label}</span>
                 </label>
               ))}
             </div>
           </div>
+          <button
+            onClick={handleSaveSettings}
+            disabled={saving}
+            className="w-full rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 px-4 py-2 text-sm font-medium text-white transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? "Saving..." : "Save Settings"}
+          </button>
         </div>
       </div>
     </div>

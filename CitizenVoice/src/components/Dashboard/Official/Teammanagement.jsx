@@ -1,5 +1,5 @@
 // src/components/Dashboard/Official/TeamManagement.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "../../../lib/utils";
 import {
   Users,
@@ -13,9 +13,11 @@ import {
   Plus,
   Search,
   BarChart3,
+  Loader2,
 } from "lucide-react";
+import { issueService } from "../../../services/issueService";
 
-// Mock team data
+// Mock team data (fallback)
 const mockTeamMembers = [
   {
     id: 1,
@@ -98,19 +100,153 @@ export function TeamManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMember, setSelectedMember] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [newMember, setNewMember] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    role: "field-officer",
+  });
+  const [saving, setSaving] = useState(false);
 
-  const filteredMembers = mockTeamMembers.filter(
+  useEffect(() => {
+    loadTeamMembers();
+  }, []);
+
+  const loadTeamMembers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // TODO: Backend team - Implement team members endpoint:
+      // GET /api/officials/team
+      // Response: { members: [...] }
+      
+      // Uncomment when backend is ready:
+      // const response = await issueService.getTeamMembers();
+      // const members = response.data?.members || [];
+      // setTeamMembers(members.length > 0 ? members : mockTeamMembers);
+      
+      // Using mock data until backend is ready
+      await new Promise(resolve => setTimeout(resolve, 600));
+      setTeamMembers(mockTeamMembers);
+    } catch (err) {
+      console.error("Error loading team members:", err);
+      setError(err.message || "Failed to load team members");
+      setTeamMembers(mockTeamMembers); // Use mock data as fallback
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredMembers = teamMembers.filter(
     (member) =>
-      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (member.name || member.username || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (member.email || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Calculate workload distribution
-  const workloadData = mockTeamMembers.map((member) => ({
-    name: member.name.split(" ")[0],
-    assigned: member.stats.assigned,
+  const workloadData = teamMembers.map((member) => ({
+    name: (member.name || member.username || "Unknown").split(" ")[0],
+    assigned: member.stats?.assigned || 0,
     capacity: 15, // Max capacity
   }));
+
+  const handleAddMember = async () => {
+    if (!newMember.name || !newMember.email) {
+      alert("Please fill in all required fields (Name and Email)");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      // TODO: Backend team - Implement add team member endpoint:
+      // POST /api/officials/team
+      // Body: { name, email, phone, role }
+      
+      // Uncomment when backend is ready:
+      // const response = await issueService.addTeamMember(newMember);
+      // setTeamMembers([...teamMembers, response.data.member]);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Add new member to local state
+      const newMemberData = {
+        id: teamMembers.length + 1,
+        _id: `${teamMembers.length + 1}`,
+        ...newMember,
+        username: newMember.name,
+        avatar: newMember.name.substring(0, 2).toUpperCase(),
+        status: "active",
+        stats: {
+          assigned: 0,
+          completed: 0,
+          avgTime: "0 days",
+        },
+        recentIssues: [],
+      };
+      
+      setTeamMembers([...teamMembers, newMemberData]);
+      setShowAddModal(false);
+      setNewMember({ name: "", email: "", phone: "", role: "field-officer" });
+      console.log("Team member added successfully:", newMemberData);
+    } catch (err) {
+      console.error("Error adding team member:", err);
+      alert("Failed to add team member. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId) => {
+    if (!confirm("Are you sure you want to remove this team member?")) return;
+    
+    try {
+      // TODO: Backend team - Implement remove team member endpoint:
+      // DELETE /api/officials/team/:memberId
+      
+      // Uncomment when backend is ready:
+      // await issueService.removeTeamMember(memberId);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setTeamMembers(teamMembers.filter((m) => (m.id || m._id) !== memberId));
+      setSelectedMember(null);
+      console.log("Team member removed successfully");
+    } catch (err) {
+      console.error("Error removing team member:", err);
+      alert("Failed to remove team member. Please try again.");
+    }
+  };
+
+  const handleSendMessage = (member) => {
+    // TODO: Backend team - Implement messaging endpoint:
+    // POST /api/officials/message
+    // Body: { recipientId, message }
+    
+    alert(`Messaging feature will be implemented by the backend team.\n\nRecipient: ${member.name || member.username}`);
+  };
+
+  const handleAssignIssueToMember = (member) => {
+    // TODO: This could navigate to issue management with member pre-selected
+    alert(`Issue assignment feature coming soon for ${member.name || member.username}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-rose-500 mx-auto mb-4" />
+          <p className="text-white/60">Loading team members...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -119,7 +255,7 @@ export function TeamManagement() {
         <div>
           <h2 className="text-2xl font-bold text-white">Team Management</h2>
           <p className="text-sm text-white/60">
-            {mockTeamMembers.length} team members
+            {teamMembers.length} team members
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -180,31 +316,38 @@ export function TeamManagement() {
 
       {/* Team Members Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredMembers.map((member) => (
-          <div
-            key={member.id}
-            onClick={() => setSelectedMember(member)}
-            className="group cursor-pointer rounded-xl border border-white/10 bg-white/5 p-6 transition-all hover:border-rose-500/30"
-          >
-            {/* Member header */}
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-lg font-semibold text-white">
-                    {member.avatar}
+        {filteredMembers.length > 0 ? (
+          filteredMembers.map((member) => {
+            const memberName = member.name || member.username || "Unknown";
+            const memberAvatar = member.avatar || memberName.substring(0, 2).toUpperCase();
+            const memberRole = member.role || member.officialDetails?.designation || "Team Member";
+            const memberStatus = member.status || "active";
+            
+            return (
+              <div
+                key={member.id || member._id}
+                onClick={() => setSelectedMember(member)}
+                className="group cursor-pointer rounded-xl border border-white/10 bg-white/5 p-6 transition-all hover:border-rose-500/30"
+              >
+                {/* Member header */}
+                <div className="mb-4 flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-lg font-semibold text-white">
+                        {memberAvatar}
+                      </div>
+                      <span
+                        className={cn(
+                          "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0a0a0a]",
+                          statusColors[memberStatus]
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-white">{memberName}</h4>
+                      <p className="text-sm text-white/60">{memberRole}</p>
+                    </div>
                   </div>
-                  <span
-                    className={cn(
-                      "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0a0a0a]",
-                      statusColors[member.status]
-                    )}
-                  />
-                </div>
-                <div>
-                  <h4 className="font-medium text-white">{member.name}</h4>
-                  <p className="text-sm text-white/60">{member.role}</p>
-                </div>
-              </div>
               <button className="rounded p-1 text-white/40 opacity-0 transition-all hover:bg-white/10 hover:text-white group-hover:opacity-100">
                 <MoreVertical className="h-4 w-4" />
               </button>
@@ -214,19 +357,19 @@ export function TeamManagement() {
             <div className="mb-4 grid grid-cols-3 gap-2">
               <div className="rounded-lg bg-white/5 p-2 text-center">
                 <p className="text-lg font-semibold text-white">
-                  {member.stats.assigned}
+                  {member.stats?.assigned || 0}
                 </p>
                 <p className="text-xs text-white/40">Active</p>
               </div>
               <div className="rounded-lg bg-white/5 p-2 text-center">
                 <p className="text-lg font-semibold text-white">
-                  {member.stats.completed}
+                  {member.stats?.completed || 0}
                 </p>
                 <p className="text-xs text-white/40">Completed</p>
               </div>
               <div className="rounded-lg bg-white/5 p-2 text-center">
                 <p className="text-lg font-semibold text-white">
-                  {member.stats.avgTime}
+                  {member.stats?.avgTime || "N/A"}
                 </p>
                 <p className="text-xs text-white/40">Avg Time</p>
               </div>
@@ -235,10 +378,10 @@ export function TeamManagement() {
             {/* Recent issues */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-white/40">Recent Issues</p>
-              {member.recentIssues.length > 0 ? (
+              {member.recentIssues && member.recentIssues.length > 0 ? (
                 member.recentIssues.slice(0, 2).map((issue) => (
                   <div
-                    key={issue.id}
+                    key={issue.id || issue._id}
                     className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2"
                   >
                     <span className="text-xs text-white/60 line-clamp-1">
@@ -249,8 +392,8 @@ export function TeamManagement() {
                         "rounded px-1.5 py-0.5 text-xs",
                         issue.status === "in-progress"
                           ? "bg-amber-500/20 text-amber-400"
-                          : issue.status === "under-review"
-                          ? "bg-violet-500/20 text-violet-400"
+                          : issue.status === "resolved"
+                          ? "bg-emerald-500/20 text-emerald-400"
                           : "bg-blue-500/20 text-blue-400"
                       )}
                     >
@@ -263,34 +406,47 @@ export function TeamManagement() {
               )}
             </div>
           </div>
-        ))}
+            );
+          })
+        ) : (
+          <div className="col-span-3 text-center py-12">
+            <Users className="h-12 w-12 text-white/20 mx-auto mb-4" />
+            <p className="text-white/60">No team members found</p>
+          </div>
+        )}
       </div>
 
       {/* Member Detail Modal */}
-      {selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-lg rounded-xl border border-white/10 bg-[#0a0a0a] p-6">
-            {/* Header */}
-            <div className="mb-6 flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-2xl font-semibold text-white">
-                    {selectedMember.avatar}
+      {selectedMember && (() => {
+        const memberName = selectedMember.name || selectedMember.username || "Unknown";
+        const memberAvatar = selectedMember.avatar || memberName.substring(0, 2).toUpperCase();
+        const memberRole = selectedMember.role || selectedMember.officialDetails?.designation || "Team Member";
+        const memberStatus = selectedMember.status || "active";
+        
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+            <div className="w-full max-w-lg rounded-xl border border-white/10 bg-[#0a0a0a] p-6">
+              {/* Header */}
+              <div className="mb-6 flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-2xl font-semibold text-white">
+                      {memberAvatar}
+                    </div>
+                    <span
+                      className={cn(
+                        "absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-[#0a0a0a]",
+                        statusColors[memberStatus]
+                      )}
+                    />
                   </div>
-                  <span
-                    className={cn(
-                      "absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-[#0a0a0a]",
-                      statusColors[selectedMember.status]
-                    )}
-                  />
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">
+                      {memberName}
+                    </h3>
+                    <p className="text-white/60">{memberRole}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-white">
-                    {selectedMember.name}
-                  </h3>
-                  <p className="text-white/60">{selectedMember.role}</p>
-                </div>
-              </div>
               <button
                 onClick={() => setSelectedMember(null)}
                 className="text-white/40 hover:text-white"
@@ -299,92 +455,110 @@ export function TeamManagement() {
               </button>
             </div>
 
-            {/* Contact info */}
-            <div className="mb-6 space-y-2">
-              <div className="flex items-center gap-2 text-sm text-white/60">
-                <Mail className="h-4 w-4" />
-                {selectedMember.email}
-              </div>
-              <div className="flex items-center gap-2 text-sm text-white/60">
-                <Phone className="h-4 w-4" />
-                {selectedMember.phone}
-              </div>
-            </div>
-
-            {/* Performance stats */}
-            <div className="mb-6 grid grid-cols-3 gap-4">
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
-                <Clock className="mx-auto mb-2 h-5 w-5 text-amber-400" />
-                <p className="text-xl font-bold text-white">
-                  {selectedMember.stats.assigned}
-                </p>
-                <p className="text-xs text-white/40">Active Issues</p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
-                <CheckCircle2 className="mx-auto mb-2 h-5 w-5 text-emerald-400" />
-                <p className="text-xl font-bold text-white">
-                  {selectedMember.stats.completed}
-                </p>
-                <p className="text-xs text-white/40">Completed</p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
-                <BarChart3 className="mx-auto mb-2 h-5 w-5 text-violet-400" />
-                <p className="text-xl font-bold text-white">
-                  {selectedMember.stats.avgTime}
-                </p>
-                <p className="text-xs text-white/40">Avg Resolution</p>
-              </div>
-            </div>
-
-            {/* Current issues */}
-            <div>
-              <h4 className="mb-3 text-sm font-medium text-white">
-                Current Assignments
-              </h4>
-              <div className="space-y-2">
-                {selectedMember.recentIssues.map((issue) => (
-                  <div
-                    key={issue.id}
-                    className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3"
-                  >
-                    <div>
-                      <p className="text-sm text-white">{issue.title}</p>
-                      <p className="text-xs text-white/40">{issue.id}</p>
-                    </div>
-                    <span
-                      className={cn(
-                        "rounded px-2 py-1 text-xs",
-                        issue.status === "in-progress"
-                          ? "bg-amber-500/20 text-amber-400"
-                          : "bg-violet-500/20 text-violet-400"
-                      )}
-                    >
-                      {issue.status}
-                    </span>
+              {/* Contact info */}
+              <div className="mb-6 space-y-2">
+                <div className="flex items-center gap-2 text-sm text-white/60">
+                  <Mail className="h-4 w-4" />
+                  {selectedMember.email || "No email provided"}
+                </div>
+                {selectedMember.phone && (
+                  <div className="flex items-center gap-2 text-sm text-white/60">
+                    <Phone className="h-4 w-4" />
+                    {selectedMember.phone}
                   </div>
-                ))}
-                {selectedMember.recentIssues.length === 0 && (
-                  <p className="py-4 text-center text-sm text-white/40">
-                    No active assignments
-                  </p>
                 )}
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="mt-6 flex gap-3">
-              <button className="flex-1 rounded-lg border border-white/10 py-2 text-sm text-white/60 hover:bg-white/5">
-                Message
-              </button>
-              <button className="flex-1 rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 py-2 text-sm font-medium text-white">
-                Assign Issue
+              {/* Performance stats */}
+              <div className="mb-6 grid grid-cols-3 gap-4">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
+                  <Clock className="mx-auto mb-2 h-5 w-5 text-amber-400" />
+                  <p className="text-xl font-bold text-white">
+                    {selectedMember.stats?.assigned || 0}
+                  </p>
+                  <p className="text-xs text-white/40">Active Issues</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
+                  <CheckCircle2 className="mx-auto mb-2 h-5 w-5 text-emerald-400" />
+                  <p className="text-xl font-bold text-white">
+                    {selectedMember.stats?.completed || 0}
+                  </p>
+                  <p className="text-xs text-white/40">Completed</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
+                  <BarChart3 className="mx-auto mb-2 h-5 w-5 text-violet-400" />
+                  <p className="text-xl font-bold text-white">
+                    {selectedMember.stats?.avgTime || "N/A"}
+                  </p>
+                  <p className="text-xs text-white/40">Avg Resolution</p>
+                </div>
+              </div>
+
+              {/* Current issues */}
+              <div>
+                <h4 className="mb-3 text-sm font-medium text-white">
+                  Current Assignments
+                </h4>
+                <div className="space-y-2">
+                  {selectedMember.recentIssues && selectedMember.recentIssues.length > 0 ? (
+                    selectedMember.recentIssues.map((issue) => (
+                      <div
+                        key={issue.id || issue._id}
+                        className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3"
+                      >
+                        <div>
+                          <p className="text-sm text-white">{issue.title}</p>
+                          <p className="text-xs text-white/40">{issue.id || issue.issueId}</p>
+                        </div>
+                        <span
+                          className={cn(
+                            "rounded px-2 py-1 text-xs",
+                            issue.status === "in-progress"
+                              ? "bg-amber-500/20 text-amber-400"
+                              : "bg-violet-500/20 text-violet-400"
+                          )}
+                        >
+                          {issue.status}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="py-4 text-center text-sm text-white/40">
+                      No active assignments
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="mt-6 flex gap-3">
+                <button 
+                  onClick={() => handleSendMessage(selectedMember)}
+                  className="flex-1 rounded-lg border border-white/10 py-2 text-sm text-white/60 hover:bg-white/5 transition-colors"
+                >
+                  Message
+                </button>
+                <button 
+                  onClick={() => handleAssignIssueToMember(selectedMember)}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 py-2 text-sm font-medium text-white hover:scale-105 transition-transform"
+                >
+                  Assign Issue
+                </button>
+              </div>
+              
+              {/* Remove Member Button */}
+              <button
+                onClick={() => handleRemoveMember(selectedMember.id || selectedMember._id)}
+                className="mt-3 w-full rounded-lg border border-rose-500/30 py-2 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
+              >
+                Remove from Team
               </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {/* Add Member Modal Placeholder */}
+      {/* Add Member Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
           <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#0a0a0a] p-6">
@@ -393,24 +567,42 @@ export function TeamManagement() {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-white/60">Name</label>
+                <label className="block text-sm text-white/60">Name *</label>
                 <input
                   type="text"
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white"
+                  value={newMember.name}
+                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white outline-none focus:border-rose-500/50"
                   placeholder="Enter name"
                 />
               </div>
               <div>
-                <label className="block text-sm text-white/60">Email</label>
+                <label className="block text-sm text-white/60">Email *</label>
                 <input
                   type="email"
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white"
+                  value={newMember.email}
+                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white outline-none focus:border-rose-500/50"
                   placeholder="Enter email"
                 />
               </div>
               <div>
+                <label className="block text-sm text-white/60">Phone (Optional)</label>
+                <input
+                  type="tel"
+                  value={newMember.phone}
+                  onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white outline-none focus:border-rose-500/50"
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div>
                 <label className="block text-sm text-white/60">Role</label>
-                <select className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white">
+                <select 
+                  value={newMember.role}
+                  onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white outline-none focus:border-rose-500/50 cursor-pointer"
+                >
                   <option value="field-officer">Field Officer</option>
                   <option value="team-lead">Team Lead</option>
                   <option value="supervisor">Supervisor</option>
@@ -419,13 +611,21 @@ export function TeamManagement() {
             </div>
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => setShowAddModal(false)}
-                className="flex-1 rounded-lg border border-white/10 py-2 text-sm text-white/60"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewMember({ name: "", email: "", phone: "", role: "field-officer" });
+                }}
+                disabled={saving}
+                className="flex-1 rounded-lg border border-white/10 py-2 text-sm text-white/60 hover:bg-white/5 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
-              <button className="flex-1 rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 py-2 text-sm font-medium text-white">
-                Add Member
+              <button 
+                onClick={handleAddMember}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 py-2 text-sm font-medium text-white hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? "Adding..." : "Add Member"}
               </button>
             </div>
           </div>

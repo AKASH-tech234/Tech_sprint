@@ -1,5 +1,5 @@
 // src/components/Dashboard/Official/Analytics.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "../../../lib/utils";
 import {
   BarChart3,
@@ -10,9 +10,12 @@ import {
   Filter,
   PieChart,
   Activity,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
+import { issueService } from "../../../services/issueService";
 
-// Mock analytics data
+// Mock analytics data (fallback)
 const mockOverviewStats = [
   {
     title: "Total Issues",
@@ -93,9 +96,124 @@ const mockDepartmentData = [
 
 export function Analytics() {
   const [dateRange, setDateRange] = useState("month");
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [dateRange]);
+
+  const loadAnalytics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // TODO: Backend team - Implement analytics endpoint:
+      // GET /api/officials/analytics?period={dateRange}
+      // Response: { overviewStats, categoryData, monthlyData, departmentData }
+      
+      // Simulating API call with mock data for frontend functionality
+      // const response = await issueService.getAnalytics({ period: dateRange });
+      // setAnalyticsData(response.data || null);
+      
+      // Using mock data until backend is ready
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+      setAnalyticsData({
+        overviewStats: mockOverviewStats,
+        categoryData: mockCategoryData,
+        monthlyData: mockMonthlyData,
+        departmentData: mockDepartmentData,
+      });
+    } catch (err) {
+      console.error("Error loading analytics:", err);
+      setError(err.message || "Failed to load analytics");
+      // Use mock data as fallback
+      setAnalyticsData({
+        overviewStats: mockOverviewStats,
+        categoryData: mockCategoryData,
+        monthlyData: mockMonthlyData,
+        departmentData: mockDepartmentData,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    // Export analytics data as CSV
+    try {
+      const data = analyticsData || {
+        overviewStats: mockOverviewStats,
+        categoryData: mockCategoryData,
+        monthlyData: mockMonthlyData,
+        departmentData: mockDepartmentData,
+      };
+      
+      let csvContent = "CitizenVoice Analytics Report\n";
+      csvContent += `Period: ${dateRange}\n`;
+      csvContent += `Generated: ${new Date().toLocaleString()}\n\n`;
+      
+      // Overview Stats
+      csvContent += "OVERVIEW STATISTICS\n";
+      csvContent += "Metric,Value,Change\n";
+      data.overviewStats.forEach(stat => {
+        csvContent += `${stat.title},${stat.value},${stat.change}\n`;
+      });
+      
+      csvContent += "\n\nISSUES BY CATEGORY\n";
+      csvContent += "Category,Count,Percentage\n";
+      data.categoryData.forEach(item => {
+        csvContent += `${item.category},${item.count},${item.percentage}%\n`;
+      });
+      
+      csvContent += "\n\nMONTHLY TREND\n";
+      csvContent += "Month,Reported,Resolved\n";
+      data.monthlyData.forEach(month => {
+        csvContent += `${month.month},${month.reported},${month.resolved}\n`;
+      });
+      
+      csvContent += "\n\nDEPARTMENT PERFORMANCE\n";
+      csvContent += "Department,Total Issues,Resolved,Resolution Rate,Avg Time\n";
+      data.departmentData.forEach(dept => {
+        const rate = Math.round((dept.resolved / dept.issues) * 100);
+        csvContent += `${dept.name},${dept.issues},${dept.resolved},${rate}%,${dept.avgTime}\n`;
+      });
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `analytics-report-${dateRange}-${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      alert("Failed to export analytics data. Please try again.");
+    }
+  };
+
+  const overviewStats = analyticsData?.overviewStats || mockOverviewStats;
+  const categoryData = analyticsData?.categoryData || mockCategoryData;
+  const monthlyData = analyticsData?.monthlyData || mockMonthlyData;
+  const departmentData = analyticsData?.departmentData || mockDepartmentData;
+
   const maxMonthlyValue = Math.max(
-    ...mockMonthlyData.map((d) => Math.max(d.reported, d.resolved))
+    ...monthlyData.map((d) => Math.max(d.reported, d.resolved))
   );
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-rose-500 mx-auto mb-4" />
+          <p className="text-white/60">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -125,16 +243,32 @@ export function Analytics() {
               </button>
             ))}
           </div>
-          <button className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-white/60 hover:bg-white/5">
+          <button 
+            onClick={handleExport}
+            className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-white/60 hover:bg-white/5"
+          >
             <Download className="h-4 w-4" />
             Export
           </button>
         </div>
       </div>
 
+      {/* Error Alert */}
+      {error && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-400" />
+            <div>
+              <p className="text-sm font-medium text-amber-400">Using cached data</p>
+              <p className="text-xs text-white/60">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Overview Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {mockOverviewStats.map((stat, index) => (
+        {overviewStats.map((stat, index) => (
           <div
             key={index}
             className={cn(
@@ -177,7 +311,7 @@ export function Analytics() {
             Issues by Category
           </h3>
           <div className="space-y-4">
-            {mockCategoryData.map((item) => (
+            {categoryData.map((item) => (
               <div key={item.category} className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-white">{item.category}</span>
@@ -203,7 +337,7 @@ export function Analytics() {
             Monthly Trend
           </h3>
           <div className="flex h-64 items-end gap-2">
-            {mockMonthlyData.map((month) => (
+            {monthlyData.map((month) => (
               <div
                 key={month.month}
                 className="group flex flex-1 flex-col items-center gap-1"
@@ -272,7 +406,7 @@ export function Analytics() {
               </tr>
             </thead>
             <tbody>
-              {mockDepartmentData.map((dept, index) => {
+              {departmentData.map((dept, index) => {
                 const rate = Math.round((dept.resolved / dept.issues) * 100);
                 return (
                   <tr
