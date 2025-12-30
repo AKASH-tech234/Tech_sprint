@@ -13,6 +13,11 @@ import issueRoutes from "./src/routes/issueRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import officialRoutes from "./src/routes/officialRoutes.js";
 
+
+import http from "http";
+import { Server } from "socket.io";
+
+
 // Load environment variables FIRST
 dotenv.config();
 
@@ -29,6 +34,18 @@ if (!fs.existsSync(uploadsDir)) {
 
 const app = express();
 const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+    ],
+    credentials: true,
+  },
+});
+
+
 
 // -------------------- Middleware --------------------
 app.use(
@@ -129,6 +146,31 @@ process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
   // Don't exit the process, just log the error
 });
+
+
+io.on("connection", (socket) => {
+  console.log("🟢 Socket connected:", socket.id);
+
+  // User joins their private room
+  socket.on("join", (userId) => {
+    socket.join(userId);
+    console.log(`👤 User ${userId} joined room`);
+  });
+
+  // Send message
+  socket.on("sendMessage", ({ senderId, receiverId, message }) => {
+    io.to(receiverId).emit("receiveMessage", {
+      senderId,
+      message,
+      createdAt: new Date(),
+    });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔴 Socket disconnected:", socket.id);
+  });
+});
+
 
 start();
  
