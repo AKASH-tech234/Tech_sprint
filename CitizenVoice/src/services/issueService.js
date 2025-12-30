@@ -219,7 +219,8 @@ class IssueService {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch team members");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch team members");
     }
 
     return response.json();
@@ -237,7 +238,8 @@ class IssueService {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to add team member");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to add team member");
     }
 
     return response.json();
@@ -251,7 +253,8 @@ class IssueService {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to remove team member");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to remove team member");
     }
 
     return response.json();
@@ -268,7 +271,8 @@ class IssueService {
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch analytics");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch analytics");
     }
 
     return response.json();

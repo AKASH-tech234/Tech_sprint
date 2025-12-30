@@ -1,13 +1,14 @@
 # Environment variables - SENSITIVE
 .env
-.env.*
-*.env
 .env.local
 .env.production
 Backend/.env
-Backend/.env.*
 CitizenVoice/.env
-CitizenVoice/.env.*
+
+# Keep .env.example files for documentation
+!.env.example
+!Backend/.env.example
+!CitizenVoice/.env.example
 
 # Node dependencies
 node_modules/

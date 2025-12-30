@@ -324,9 +324,9 @@ export function Analytics() {
             Monthly Trend
           </h3>
           <div className="flex h-64 items-end gap-2">
-            {monthlyData.map((month) => (
+            {monthlyData.map((month, index) => (
               <div
-                key={month.month}
+                key={`${month.month}-${index}`}
                 className="group flex flex-1 flex-col items-center gap-1"
               >
                 <div className="relative flex w-full justify-center gap-1">
