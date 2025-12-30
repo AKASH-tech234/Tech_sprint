@@ -115,7 +115,7 @@ const TeamManagement = () => {
   useEffect(() => {
     const initialExpanded = {};
     Object.keys(membersByDepartment).forEach(dept => {
-      initialExpanded[dept] = true; // Start expanded
+      initialExpanded[dept] = false; // Start collapsed
     });
     setExpandedDepartments(initialExpanded);
   }, [members]);

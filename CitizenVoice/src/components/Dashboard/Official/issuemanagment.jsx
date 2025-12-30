@@ -49,7 +49,7 @@ const priorityConfig = {
   low: { label: "Low", color: "text-emerald-400", bg: "bg-emerald-500/20" },
 };
 
-export function IssueManagement({ viewMode = "kanban" }) {
+export function IssueManagement({ viewMode = "table" }) {
   const { user } = useAuth();
   const isOfficialAdmin = !!user?.isOfficialAdmin;
 

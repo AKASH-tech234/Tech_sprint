@@ -60,10 +60,27 @@ function DashboardHome() {
   const [priorityFilter, setPriorityFilter] = useState("high");
   const [stats, setStats] = useState(mockStats);
   const [loading, setLoading] = useState(true);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamLoading, setTeamLoading] = useState(true);
 
   useEffect(() => {
     loadStats();
+    loadTeamMembers();
   }, []);
+
+  const loadTeamMembers = async () => {
+    try {
+      setTeamLoading(true);
+      const response = await issueService.getTeamMembers();
+      const members = response.data?.members || [];
+      setTeamMembers(members);
+    } catch (err) {
+      console.error("Error loading team members:", err);
+      setTeamMembers([]);
+    } finally {
+      setTeamLoading(false);
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -118,7 +135,7 @@ function DashboardHome() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Pending Issues"
           value={loading ? "..." : stats.pending}
@@ -150,13 +167,6 @@ function DashboardHome() {
           trend="up"
           trendValue={8}
           onClick={() => navigate("/dashboard/official/analytics")}
-        />
-        <StatsCard
-          title="Messages"
-          value="Chat"
-          icon={MessageSquare}
-          color="rose"
-          onClick={() => navigate("/dashboard/official/chat")}
         />
       </div>
 
@@ -292,41 +302,46 @@ function DashboardHome() {
             </button>
           </div>
           <div className="space-y-3">
-            {[
-              { name: "John Doe", status: "active", tasks: 8 },
-              { name: "Sarah Wilson", status: "active", tasks: 3 },
-              { name: "Mike Chen", status: "busy", tasks: 12 },
-              { name: "Emily Davis", status: "offline", tasks: 0 },
-            ].map((member) => (
-              <div
-                key={member.name}
-                className="flex items-center justify-between rounded-lg bg-white/5 p-3"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-xs font-medium text-white">
-                      {member.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </div>
-                    <span
-                      className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0a0a0a] ${
-                        member.status === "active"
-                          ? "bg-emerald-500"
-                          : member.status === "busy"
-                          ? "bg-amber-500"
-                          : "bg-gray-500"
-                      }`}
-                    />
-                  </div>
-                  <span className="text-sm text-white">{member.name}</span>
-                </div>
-                <span className="text-sm text-white/40">
-                  {member.tasks} tasks
-                </span>
+            {teamLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
               </div>
-            ))}
+            ) : teamMembers.length === 0 ? (
+              <div className="text-center py-4 text-white/40 text-sm">
+                No team members yet
+              </div>
+            ) : (
+              teamMembers.slice(0, 4).map((member) => (
+                <div
+                  key={member._id || member.id}
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-xs font-medium text-white">
+                        {(member.name || member.username || "??")
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </div>
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0a0a0a] ${
+                          member.status === "active"
+                            ? "bg-emerald-500"
+                            : member.status === "busy" || (member.stats?.assigned > 10)
+                            ? "bg-amber-500"
+                            : "bg-gray-500"
+                        }`}
+                      />
+                    </div>
+                    <span className="text-sm text-white">{member.name || member.username}</span>
+                  </div>
+                  <span className="text-sm text-white/40">
+                    {member.stats?.assigned || 0} tasks
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
