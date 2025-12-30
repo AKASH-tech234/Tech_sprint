@@ -1,6 +1,9 @@
-# Environment variables
+# Environment variables - SENSITIVE
 .env
 .env.*
+*.env
+.env.local
+.env.production
 Backend/.env
 Backend/.env.*
 CitizenVoice/.env
@@ -10,7 +13,12 @@ CitizenVoice/.env.*
 node_modules/
 Backend/node_modules/
 CitizenVoice/node_modules/
+
+# Uploads
 uploads/
+Backend/uploads/
+
+# Images (optional)
 *.jpg
 *.png
 *.jpeg
