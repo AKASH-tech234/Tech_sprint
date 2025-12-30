@@ -142,7 +142,7 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   // Check if user exists
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email }).select("+password").populate('officialDetails.addedBy', 'username email');
 
   if (!user) {
     console.log("❌ [Backend] User not found:", email);
@@ -150,6 +150,17 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   console.log("👤 [Backend] User found:", user._id);
+
+  // Additional check for team members: only allow login if added by a team leader
+  if (user.role === 'official' && user.officialDetails?.addedBy) {
+    // This is a team member - verify their team leader still exists
+    const teamLeader = user.officialDetails.addedBy;
+    if (!teamLeader) {
+      console.log("❌ [Backend] Team member's leader not found:", email);
+      throw new ApiError(403, "Your account has been deactivated. Contact your team leader.");
+    }
+    console.log("✅ [Backend] Team member verified, added by:", teamLeader.username);
+  }
 
   // Check password
   const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -334,6 +345,8 @@ export const checkAuth = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       avatar: user.avatar || null,
+      officialDetails: user.role === 'official' ? (user.officialDetails || {}) : undefined,
+      isOfficialAdmin: isOfficialAdmin(user),
       createdAt: user.createdAt,
     };
 

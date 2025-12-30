@@ -1,5 +1,6 @@
 import Issue from '../models/Issue.js';
 import { User } from '../models/userModel.js';
+import { TeamMember } from '../models/TeamMember.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
@@ -114,31 +115,39 @@ export const assignIssue = asyncHandler(async (req, res) => {
 
 // GET /api/officials/team - Get team members
 export const getTeamMembers = asyncHandler(async (req, res) => {
-  const members = await User.find({ role: 'official', isActive: true }).select(
-    'username email phone avatar officialDetails createdAt'
-  );
+  // Get team members added by this team leader
+  const teamMembers = await TeamMember.find({ addedBy: req.user._id, status: 'active' })
+    .populate('userId', 'username email phone avatar isActive')
+    .sort({ createdAt: -1 });
 
   // Get issue counts for each member
   const membersWithStats = await Promise.all(
-    members.map(async (member) => {
-      const assignedIssues = await Issue.find({ assignedTo: member._id });
+    teamMembers.map(async (teamMember) => {
+      const assignedIssues = await Issue.find({ assignedTo: teamMember.userId });
       const completedIssues = assignedIssues.filter(i => i.status === 'resolved').length;
       
-      const recentIssues = await Issue.find({ assignedTo: member._id })
+      const recentIssues = await Issue.find({ assignedTo: teamMember.userId })
         .select('issueId title status')
         .sort({ createdAt: -1 })
         .limit(3);
 
+      const unreadMessages = teamMember.messages.filter(
+        msg => msg.to.toString() === req.user._id.toString() && !msg.read
+      ).length;
+
       return {
-        _id: member._id,
-        id: member._id,
-        username: member.username,
-        name: member.username,
-        email: member.email,
-        phone: member.phone || '',
-        role: member.officialDetails?.designation || 'field-officer',
-        avatar: member.avatar || member.username?.slice(0, 2).toUpperCase(),
-        status: 'active',
+        _id: teamMember._id,
+        id: teamMember._id,
+        userId: teamMember.userId?._id,
+        username: teamMember.userId?.username || teamMember.name,
+        name: teamMember.name,
+        email: teamMember.email,
+        phone: teamMember.phone || '',
+        role: teamMember.designation,
+        department: teamMember.department || '',
+        avatar: teamMember.userId?.avatar || teamMember.name?.slice(0, 2).toUpperCase(),
+        status: teamMember.userId?.isActive ? 'active' : 'inactive',
+        unreadMessages,
         stats: {
           assigned: assignedIssues.length,
           completed: completedIssues,
@@ -149,6 +158,7 @@ export const getTeamMembers = asyncHandler(async (req, res) => {
           title: i.title,
           status: i.status,
         })),
+        addedAt: teamMember.createdAt,
       };
     })
   );
@@ -158,10 +168,16 @@ export const getTeamMembers = asyncHandler(async (req, res) => {
 
 // POST /api/officials/team - Add team member
 export const addTeamMember = asyncHandler(async (req, res) => {
-  const { name, email, phone, role } = req.body;
+  const { name, email, phone, role, department } = req.body;
 
   if (!name || !email) {
     throw new ApiError(400, 'Name and email are required');
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new ApiError(400, 'Please provide a valid email address');
   }
 
   // Check if user already exists
@@ -170,31 +186,55 @@ export const addTeamMember = asyncHandler(async (req, res) => {
     throw new ApiError(409, 'User with this email already exists');
   }
 
+  // Check if team member already added by this leader
+  const existingTeamMember = await TeamMember.findOne({ email, addedBy: req.user._id });
+  if (existingTeamMember) {
+    throw new ApiError(409, 'Team member already added');
+  }
+
   // Create new official user with temporary password
   const bcrypt = await import('bcryptjs');
-  const hashedPassword = await bcrypt.default.hash('TempPass123!', 10);
+  const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
+  const hashedPassword = await bcrypt.default.hash(tempPassword, 10);
 
   const user = await User.create({
-    username: name,
+    username: name.toLowerCase().replace(/\s+/g, '_'),
     email,
     phone: phone || null,
     password: hashedPassword,
     role: 'official',
     officialDetails: {
       designation: role || 'field-officer',
+      department: department || '',
+      addedBy: req.user._id,
     },
   });
 
-  const member = {
-    _id: user._id,
-    id: user._id,
-    username: user.username,
-    name: user.username,
-    email: user.email,
-    phone: user.phone,
-    role: role || 'field-officer',
-    avatar: user.username?.slice(0, 2).toUpperCase(),
+  // Create team member record
+  const teamMember = await TeamMember.create({
+    userId: user._id,
+    addedBy: req.user._id,
+    name,
+    email,
+    phone: phone || null,
+    designation: role || 'field-officer',
+    department: department || '',
     status: 'active',
+  });
+
+  const member = {
+    _id: teamMember._id,
+    id: teamMember._id,
+    userId: user._id,
+    username: user.username,
+    name,
+    email,
+    phone: phone || '',
+    role: role || 'field-officer',
+    department: department || '',
+    avatar: name.slice(0, 2).toUpperCase(),
+    status: 'active',
+    tempPassword, // Send this once to user (in real app, send via email)
     stats: { assigned: 0, completed: 0, avgTime: '0 days' },
     recentIssues: [],
   };
@@ -206,15 +246,23 @@ export const addTeamMember = asyncHandler(async (req, res) => {
 export const removeTeamMember = asyncHandler(async (req, res) => {
   const { memberId } = req.params;
 
-  const user = await User.findById(memberId);
-  if (!user || user.role !== 'official') {
-    throw new ApiError(404, 'Team member not found');
+  // Find team member added by this leader
+  const teamMember = await TeamMember.findOne({ _id: memberId, addedBy: req.user._id });
+  if (!teamMember) {
+    throw new ApiError(404, 'Team member not found or you do not have permission to remove them');
   }
 
-  // Unassign all issues from this member
-  await Issue.updateMany({ assignedTo: memberId }, { $unset: { assignedTo: 1 } });
-  
-  await user.deleteOne();
+  const user = await User.findById(teamMember.userId);
+  if (user) {
+    // Unassign all issues from this member
+    await Issue.updateMany({ assignedTo: user._id }, { $unset: { assignedTo: 1 } });
+    
+    // Delete the user account
+    await user.deleteOne();
+  }
+
+  // Delete team member record
+  await teamMember.deleteOne();
 
   res.json(new ApiResponse(200, null, 'Team member removed successfully'));
 });
@@ -227,10 +275,82 @@ export const sendMessage = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'recipientId and message are required');
   }
 
-  // For now, just acknowledge the message (real implementation would save to DB)
-  const messageId = `msg_${Date.now()}`;
+  // Find team member
+  const teamMember = await TeamMember.findOne({
+    _id: recipientId,
+    addedBy: req.user._id,
+  });
 
-  res.status(201).json(new ApiResponse(201, { messageId, sent: true }, 'Message sent successfully'));
+  if (!teamMember) {
+    throw new ApiError(404, 'Team member not found');
+  }
+
+  // Add message to team member record
+  teamMember.messages.push({
+    from: req.user._id,
+    to: teamMember.userId,
+    message,
+    timestamp: new Date(),
+    read: false,
+  });
+
+  await teamMember.save();
+
+  res.status(201).json(new ApiResponse(201, { 
+    messageId: teamMember.messages[teamMember.messages.length - 1]._id,
+    sent: true 
+  }, 'Message sent successfully'));
+});
+
+// GET /api/officials/messages/:memberId - Get message thread with team member
+export const getMessages = asyncHandler(async (req, res) => {
+  const { memberId } = req.params;
+
+  const teamMember = await TeamMember.findOne({
+    _id: memberId,
+    addedBy: req.user._id,
+  })
+    .populate('userId', 'username avatar')
+    .populate('messages.from', 'username avatar')
+    .populate('messages.to', 'username avatar');
+
+  if (!teamMember) {
+    throw new ApiError(404, 'Team member not found');
+  }
+
+  res.json(new ApiResponse(200, { 
+    messages: teamMember.messages,
+    member: {
+      id: teamMember._id,
+      name: teamMember.name,
+      avatar: teamMember.userId?.avatar || teamMember.name.slice(0, 2).toUpperCase(),
+    }
+  }, 'Messages fetched'));
+});
+
+// PATCH /api/officials/messages/:memberId/mark-read - Mark messages as read
+export const markMessagesRead = asyncHandler(async (req, res) => {
+  const { memberId } = req.params;
+
+  const teamMember = await TeamMember.findOne({
+    _id: memberId,
+    addedBy: req.user._id,
+  });
+
+  if (!teamMember) {
+    throw new ApiError(404, 'Team member not found');
+  }
+
+  // Mark all messages to this user as read
+  teamMember.messages.forEach(msg => {
+    if (msg.to.toString() === req.user._id.toString()) {
+      msg.read = true;
+    }
+  });
+
+  await teamMember.save();
+
+  res.json(new ApiResponse(200, null, 'Messages marked as read'));
 });
 
 // PATCH /api/officials/settings - Update official settings

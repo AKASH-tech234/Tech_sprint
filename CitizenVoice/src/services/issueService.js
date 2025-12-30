@@ -3,7 +3,7 @@
 // Backend endpoints to be implemented
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
 const getAuthHeader = () => {
   const token = localStorage.getItem("token");
@@ -347,6 +347,53 @@ class IssueService {
 
     if (!response.ok) {
       throw new Error("Failed to fetch all issues");
+    }
+
+    return response.json();
+  }
+
+  // === Team Management APIs ===
+  
+  // Send message to team member
+  async sendMessageToMember(recipientId, message) {
+    const response = await fetch(`${API_BASE_URL}/officials/message`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ recipientId, message }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to send message");
+    }
+
+    return response.json();
+  }
+
+  // Get messages with team member
+  async getMessages(memberId) {
+    const response = await fetch(`${API_BASE_URL}/officials/messages/${memberId}`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch messages");
+    }
+
+    return response.json();
+  }
+
+  // Mark messages as read
+  async markMessagesRead(memberId) {
+    const response = await fetch(`${API_BASE_URL}/officials/messages/${memberId}/mark-read`, {
+      method: "PATCH",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to mark messages as read");
     }
 
     return response.json();

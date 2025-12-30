@@ -171,8 +171,8 @@ export function IssueManagement({ viewMode = "kanban" }) {
     try {
       setUpdating(true);
       
-      // Assign issue via backend
-      await issueService.assignIssue(issueId, member._id);
+      // Assign issue via backend - use userId (User's ID) not _id (TeamMember's ID)
+      await issueService.assignIssue(issueId, member.userId || member._id);
       
       // Update local state
       setIssues((prev) =>

@@ -169,6 +169,43 @@ export const getRecentIssues = asyncHandler(async (req, res) => {
   );
 });
 
+// Get All Issues with Filters
+export const getAllIssues = asyncHandler(async (req, res) => {
+  const { status, category, priority, search } = req.query;
+  
+  const query = {};
+  
+  // Apply filters (only if not "all")
+  if (status && status !== 'all') {
+    query.status = status;
+  }
+  
+  if (category && category !== 'all') {
+    query.category = category;
+  }
+  
+  if (priority && priority !== 'all') {
+    query.priority = priority;
+  }
+  
+  // Search by title or description
+  if (search) {
+    query.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } }
+    ];
+  }
+  
+  const issues = await Issue.find(query)
+    .populate('reportedBy', 'username avatar email')
+    .populate('assignedTo', 'username email')
+    .sort({ createdAt: -1 });
+  
+  res.json(
+    new ApiResponse(200, { issues, total: issues.length }, 'Issues fetched successfully')
+  );
+});
+
 // Get Issues for Map
 export const getMapIssues = asyncHandler(async (req, res) => {
   const { bounds, status, category } = req.query;

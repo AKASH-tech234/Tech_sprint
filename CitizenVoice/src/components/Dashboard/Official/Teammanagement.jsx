@@ -1,628 +1,417 @@
-// src/components/Dashboard/Official/TeamManagement.jsx
-import React, { useState, useEffect } from "react";
-import { cn } from "../../../lib/utils";
-import {
-  Users,
-  Mail,
-  Phone,
-  MapPin,
-  MoreVertical,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  Plus,
-  Search,
-  BarChart3,
-  Loader2,
-} from "lucide-react";
-import { issueService } from "../../../services/issueService";
-import { useAuth } from "../../../context/AuthContext";
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Users, UserPlus, Trash2, MessageSquare, X, Send, 
+  Mail, Phone, Briefcase, Activity, CheckCircle2
+} from 'lucide-react';
+import { issueService } from '../../../services/issueService';
+import { useAuth } from '../../../context/AuthContext';
 
-// Mock team data (fallback)
-const mockTeamMembers = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john.doe@city.gov",
-    phone: "+1 234 567 890",
-    role: "Field Officer",
-    avatar: "JD",
-    status: "active",
-    stats: {
-      assigned: 8,
-      completed: 45,
-      avgTime: "2.3 days",
-    },
-    recentIssues: [
-      { id: "ISS-001", title: "Pothole repair", status: "in-progress" },
-      { id: "ISS-004", title: "Water leak", status: "under-review" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Sarah Wilson",
-    email: "sarah.wilson@city.gov",
-    phone: "+1 234 567 891",
-    role: "Team Lead",
-    avatar: "SW",
-    status: "active",
-    stats: {
-      assigned: 3,
-      completed: 67,
-      avgTime: "1.8 days",
-    },
-    recentIssues: [
-      { id: "ISS-003", title: "Garbage collection", status: "assigned" },
-    ],
-  },
-  {
-    id: 3,
-    name: "Mike Chen",
-    email: "mike.chen@city.gov",
-    phone: "+1 234 567 892",
-    role: "Field Officer",
-    avatar: "MC",
-    status: "busy",
-    stats: {
-      assigned: 12,
-      completed: 38,
-      avgTime: "3.1 days",
-    },
-    recentIssues: [
-      { id: "ISS-007", title: "Street light fix", status: "in-progress" },
-      { id: "ISS-008", title: "Traffic signal", status: "in-progress" },
-      { id: "ISS-009", title: "Road marking", status: "assigned" },
-    ],
-  },
-  {
-    id: 4,
-    name: "Emily Davis",
-    email: "emily.davis@city.gov",
-    phone: "+1 234 567 893",
-    role: "Field Officer",
-    avatar: "ED",
-    status: "offline",
-    stats: {
-      assigned: 0,
-      completed: 52,
-      avgTime: "2.5 days",
-    },
-    recentIssues: [],
-  },
-];
-
-const statusColors = {
-  active: "bg-emerald-500",
-  busy: "bg-amber-500",
-  offline: "bg-gray-500",
-};
-
-export function TeamManagement() {
+const TeamManagement = () => {
   const { user } = useAuth();
-  const isOfficialAdmin = !!user?.isOfficialAdmin;
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [teamMembers, setTeamMembers] = useState([]);
+  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
   const [newMember, setNewMember] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    role: "field-officer",
+    name: '',
+    email: '',
+    phone: '',
+    role: 'field-officer',
+    department: ''
   });
-  const [saving, setSaving] = useState(false);
-
-  if (!isOfficialAdmin) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-rose-500 mx-auto mb-4" />
-          <p className="text-rose-400 mb-2">Access denied</p>
-          <p className="text-white/60 text-sm">
-            Only the team lead can manage members.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   useEffect(() => {
-    loadTeamMembers();
+    fetchTeamMembers();
   }, []);
 
-  const loadTeamMembers = async () => {
+  const fetchTeamMembers = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
-      // Fetch team members from backend
       const response = await issueService.getTeamMembers();
-      const members = response.data?.members || [];
-      setTeamMembers(members.length > 0 ? members : mockTeamMembers);
-    } catch (err) {
-      console.error("Error loading team members:", err);
-      setError(err.message || "Failed to load team members");
-      setTeamMembers(mockTeamMembers); // Use mock data as fallback
+      setMembers(response.data?.members || []);
+    } catch (error) {
+      console.error('Failed to fetch team members:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredMembers = teamMembers.filter(
-    (member) =>
-      (member.name || member.username || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (member.email || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Calculate workload distribution
-  const workloadData = teamMembers.map((member) => ({
-    name: (member.name || member.username || "Unknown").split(" ")[0],
-    assigned: member.stats?.assigned || 0,
-    capacity: 15, // Max capacity
-  }));
-
-  const handleAddMember = async () => {
-    if (!newMember.name || !newMember.email) {
-      alert("Please fill in all required fields (Name and Email)");
-      return;
-    }
-
+  const handleAddMember = async (e) => {
+    e.preventDefault();
     try {
-      setSaving(true);
-      
-      // Add team member via backend
       const response = await issueService.addTeamMember(newMember);
-      const addedMember = response.data?.member || {
-        id: teamMembers.length + 1,
-        _id: `${teamMembers.length + 1}`,
-        ...newMember,
-        username: newMember.name,
-        avatar: newMember.name.substring(0, 2).toUpperCase(),
-        status: "active",
-        stats: { assigned: 0, completed: 0, avgTime: "0 days" },
-        recentIssues: [],
-      };
-      
-      setTeamMembers([...teamMembers, addedMember]);
+      setMembers([...members, response.data.member]);
       setShowAddModal(false);
-      setNewMember({ name: "", email: "", phone: "", role: "field-officer" });
-      console.log("Team member added successfully:", addedMember);
-    } catch (err) {
-      console.error("Error adding team member:", err);
-      alert("Failed to add team member. Please try again.");
-    } finally {
-      setSaving(false);
+      setNewMember({ name: '', email: '', phone: '', role: 'field-officer', department: '' });
+      
+      if (response.data.member.tempPassword) {
+        alert(`Team member added!\n\nTemp Password: ${response.data.member.tempPassword}\n\nShare this securely.`);
+      }
+    } catch (error) {
+      alert(error.message || 'Failed to add team member');
     }
   };
 
   const handleRemoveMember = async (memberId) => {
-    if (!confirm("Are you sure you want to remove this team member?")) return;
-    
+    if (!confirm('Remove this team member? This will delete their account and unassign all issues.')) return;
+
     try {
-      // Remove team member via backend
       await issueService.removeTeamMember(memberId);
-      
-      setTeamMembers(teamMembers.filter((m) => (m.id || m._id) !== memberId));
-      setSelectedMember(null);
-      console.log("Team member removed successfully");
-    } catch (err) {
-      console.error("Error removing team member:", err);
-      alert("Failed to remove team member. Please try again.");
+      setMembers(members.filter(m => m._id !== memberId));
+    } catch (error) {
+      alert(error.message || 'Failed to remove team member');
     }
   };
 
-  const handleSendMessage = (member) => {
-    // TODO: Backend team - Implement messaging endpoint:
-    // POST /api/officials/message
-    // Body: { recipientId, message }
-    
-    alert(`Messaging feature will be implemented by the backend team.\n\nRecipient: ${member.name || member.username}`);
+  const openMessageModal = async (member) => {
+    setSelectedMember(member);
+    setShowMessageModal(true);
+    try {
+      const response = await issueService.getMessages(member._id);
+      setMessages(response.data?.messages || []);
+      await issueService.markMessagesRead(member._id);
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+    }
   };
 
-  const handleAssignIssueToMember = (member) => {
-    // TODO: This could navigate to issue management with member pre-selected
-    alert(`Issue assignment feature coming soon for ${member.name || member.username}`);
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    try {
+      await issueService.sendMessageToMember(selectedMember._id, newMessage);
+      const response = await issueService.getMessages(selectedMember._id);
+      setMessages(response.data?.messages || []);
+      setNewMessage('');
+    } catch (error) {
+      alert(error.message || 'Failed to send message');
+    }
   };
 
-  if (loading) {
+  if (!user?.isOfficialAdmin) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-rose-500 mx-auto mb-4" />
-          <p className="text-white/60">Loading team members...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 text-center">
+          <X className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
+          <p className="text-gray-300">Only team leaders can access team management.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Team Management</h2>
-          <p className="text-sm text-white/60">
-            {teamMembers.length} team members
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-            <input
-              type="text"
-              placeholder="Search members..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-48 rounded-lg border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white placeholder-white/40 outline-none focus:border-rose-500/50"
-            />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <Users className="w-8 h-8" />
+              Team Management
+            </h1>
+            <p className="text-gray-300 mt-2">Manage your team members and communications</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 px-4 py-2 text-sm font-medium text-white transition-all hover:scale-105"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all"
           >
-            <Plus className="h-4 w-4" />
+            <UserPlus className="w-5 h-5" />
             Add Member
           </button>
         </div>
-      </div>
 
-      {/* Workload Distribution */}
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
-          <BarChart3 className="h-5 w-5 text-rose-400" />
-          Workload Distribution
-        </h3>
-        <div className="space-y-4">
-          {workloadData.map((member) => (
-            <div key={member.name} className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-white">{member.name}</span>
-                <span className="text-white/60">
-                  {member.assigned}/{member.capacity} issues
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all",
-                    member.assigned / member.capacity > 0.8
-                      ? "bg-rose-500"
-                      : member.assigned / member.capacity > 0.5
-                      ? "bg-amber-500"
-                      : "bg-emerald-500"
-                  )}
-                  style={{
-                    width: `${(member.assigned / member.capacity) * 100}%`,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Team Members Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredMembers.length > 0 ? (
-          filteredMembers.map((member) => {
-            const memberName = member.name || member.username || "Unknown";
-            const memberAvatar = member.avatar || memberName.substring(0, 2).toUpperCase();
-            const memberRole = member.role || member.officialDetails?.designation || "Team Member";
-            const memberStatus = member.status || "active";
-            
-            return (
-              <div
-                key={member.id || member._id}
-                onClick={() => setSelectedMember(member)}
-                className="group cursor-pointer rounded-xl border border-white/10 bg-white/5 p-6 transition-all hover:border-rose-500/30"
+        {loading ? (
+          <div className="text-center text-white py-12">
+            <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="mt-4">Loading...</p>
+          </div>
+        ) : members.length === 0 ? (
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-12 border border-white/20 text-center">
+            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">No Team Members</h3>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="mt-4 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl"
+            >
+              Add First Member
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {members.map((member) => (
+              <motion.div
+                key={member._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:border-purple-500/50 transition-all"
               >
-                {/* Member header */}
-                <div className="mb-4 flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-lg font-semibold text-white">
-                        {memberAvatar}
-                      </div>
-                      <span
-                        className={cn(
-                          "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0a0a0a]",
-                          statusColors[memberStatus]
-                        )}
-                      />
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                      {member.avatar}
                     </div>
                     <div>
-                      <h4 className="font-medium text-white">{memberName}</h4>
-                      <p className="text-sm text-white/60">{memberRole}</p>
+                      <h3 className="text-lg font-semibold text-white">{member.name}</h3>
+                      <p className="text-sm text-gray-300">{member.role}</p>
                     </div>
                   </div>
-              <button className="rounded p-1 text-white/40 opacity-0 transition-all hover:bg-white/10 hover:text-white group-hover:opacity-100">
-                <MoreVertical className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Stats */}
-            <div className="mb-4 grid grid-cols-3 gap-2">
-              <div className="rounded-lg bg-white/5 p-2 text-center">
-                <p className="text-lg font-semibold text-white">
-                  {member.stats?.assigned || 0}
-                </p>
-                <p className="text-xs text-white/40">Active</p>
-              </div>
-              <div className="rounded-lg bg-white/5 p-2 text-center">
-                <p className="text-lg font-semibold text-white">
-                  {member.stats?.completed || 0}
-                </p>
-                <p className="text-xs text-white/40">Completed</p>
-              </div>
-              <div className="rounded-lg bg-white/5 p-2 text-center">
-                <p className="text-lg font-semibold text-white">
-                  {member.stats?.avgTime || "N/A"}
-                </p>
-                <p className="text-xs text-white/40">Avg Time</p>
-              </div>
-            </div>
-
-            {/* Recent issues */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-white/40">Recent Issues</p>
-              {member.recentIssues && member.recentIssues.length > 0 ? (
-                member.recentIssues.slice(0, 2).map((issue) => (
-                  <div
-                    key={issue.id || issue._id}
-                    className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2"
-                  >
-                    <span className="text-xs text-white/60 line-clamp-1">
-                      {issue.title}
-                    </span>
-                    <span
-                      className={cn(
-                        "rounded px-1.5 py-0.5 text-xs",
-                        issue.status === "in-progress"
-                          ? "bg-amber-500/20 text-amber-400"
-                          : issue.status === "resolved"
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-blue-500/20 text-blue-400"
-                      )}
-                    >
-                      {issue.status}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-white/20">No active issues</p>
-              )}
-            </div>
-          </div>
-            );
-          })
-        ) : (
-          <div className="col-span-3 text-center py-12">
-            <Users className="h-12 w-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/60">No team members found</p>
-          </div>
-        )}
-      </div>
-
-      {/* Member Detail Modal */}
-      {selectedMember && (() => {
-        const memberName = selectedMember.name || selectedMember.username || "Unknown";
-        const memberAvatar = selectedMember.avatar || memberName.substring(0, 2).toUpperCase();
-        const memberRole = selectedMember.role || selectedMember.officialDetails?.designation || "Team Member";
-        const memberStatus = selectedMember.status || "active";
-        
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-            <div className="w-full max-w-lg rounded-xl border border-white/10 bg-[#0a0a0a] p-6">
-              {/* Header */}
-              <div className="mb-6 flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-2xl font-semibold text-white">
-                      {memberAvatar}
+                  {member.unreadMessages > 0 && (
+                    <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
+                      {member.unreadMessages}
                     </div>
-                    <span
-                      className={cn(
-                        "absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-[#0a0a0a]",
-                        statusColors[memberStatus]
-                      )}
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-white">
-                      {memberName}
-                    </h3>
-                    <p className="text-white/60">{memberRole}</p>
-                  </div>
-                </div>
-              <button
-                onClick={() => setSelectedMember(null)}
-                className="text-white/40 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-              {/* Contact info */}
-              <div className="mb-6 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-white/60">
-                  <Mail className="h-4 w-4" />
-                  {selectedMember.email || "No email provided"}
-                </div>
-                {selectedMember.phone && (
-                  <div className="flex items-center gap-2 text-sm text-white/60">
-                    <Phone className="h-4 w-4" />
-                    {selectedMember.phone}
-                  </div>
-                )}
-              </div>
-
-              {/* Performance stats */}
-              <div className="mb-6 grid grid-cols-3 gap-4">
-                <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
-                  <Clock className="mx-auto mb-2 h-5 w-5 text-amber-400" />
-                  <p className="text-xl font-bold text-white">
-                    {selectedMember.stats?.assigned || 0}
-                  </p>
-                  <p className="text-xs text-white/40">Active Issues</p>
-                </div>
-                <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
-                  <CheckCircle2 className="mx-auto mb-2 h-5 w-5 text-emerald-400" />
-                  <p className="text-xl font-bold text-white">
-                    {selectedMember.stats?.completed || 0}
-                  </p>
-                  <p className="text-xs text-white/40">Completed</p>
-                </div>
-                <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
-                  <BarChart3 className="mx-auto mb-2 h-5 w-5 text-violet-400" />
-                  <p className="text-xl font-bold text-white">
-                    {selectedMember.stats?.avgTime || "N/A"}
-                  </p>
-                  <p className="text-xs text-white/40">Avg Resolution</p>
-                </div>
-              </div>
-
-              {/* Current issues */}
-              <div>
-                <h4 className="mb-3 text-sm font-medium text-white">
-                  Current Assignments
-                </h4>
-                <div className="space-y-2">
-                  {selectedMember.recentIssues && selectedMember.recentIssues.length > 0 ? (
-                    selectedMember.recentIssues.map((issue) => (
-                      <div
-                        key={issue.id || issue._id}
-                        className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3"
-                      >
-                        <div>
-                          <p className="text-sm text-white">{issue.title}</p>
-                          <p className="text-xs text-white/40">{issue.id || issue.issueId}</p>
-                        </div>
-                        <span
-                          className={cn(
-                            "rounded px-2 py-1 text-xs",
-                            issue.status === "in-progress"
-                              ? "bg-amber-500/20 text-amber-400"
-                              : "bg-violet-500/20 text-violet-400"
-                          )}
-                        >
-                          {issue.status}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="py-4 text-center text-sm text-white/40">
-                      No active assignments
-                    </p>
                   )}
                 </div>
-              </div>
 
-              {/* Actions */}
-              <div className="mt-6 flex gap-3">
-                <button 
-                  onClick={() => handleSendMessage(selectedMember)}
-                  className="flex-1 rounded-lg border border-white/10 py-2 text-sm text-white/60 hover:bg-white/5 transition-colors"
-                >
-                  Message
-                </button>
-                <button 
-                  onClick={() => handleAssignIssueToMember(selectedMember)}
-                  className="flex-1 rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 py-2 text-sm font-medium text-white hover:scale-105 transition-transform"
-                >
-                  Assign Issue
-                </button>
-              </div>
-              
-              {/* Remove Member Button */}
-              <button
-                onClick={() => handleRemoveMember(selectedMember.id || selectedMember._id)}
-                className="mt-3 w-full rounded-lg border border-rose-500/30 py-2 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
-              >
-                Remove from Team
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+                <div className="space-y-2 mb-4 text-sm text-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    {member.email}
+                  </div>
+                  {member.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      {member.phone}
+                    </div>
+                  )}
+                  {member.department && (
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-4 h-4" />
+                      {member.department}
+                    </div>
+                  )}
+                </div>
 
-      {/* Add Member Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#0a0a0a] p-6">
-            <h3 className="mb-4 text-lg font-semibold text-white">
-              Add Team Member
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-white/60">Name *</label>
-                <input
-                  type="text"
-                  value={newMember.name}
-                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white outline-none focus:border-rose-500/50"
-                  placeholder="Enter name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-white/60">Email *</label>
-                <input
-                  type="email"
-                  value={newMember.email}
-                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white outline-none focus:border-rose-500/50"
-                  placeholder="Enter email"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-white/60">Phone (Optional)</label>
-                <input
-                  type="tel"
-                  value={newMember.phone}
-                  onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white outline-none focus:border-rose-500/50"
-                  placeholder="Enter phone number"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-white/60">Role</label>
-                <select 
-                  value={newMember.role}
-                  onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white outline-none focus:border-rose-500/50 cursor-pointer"
-                >
-                  <option value="field-officer">Field Officer</option>
-                  <option value="team-lead">Team Lead</option>
-                  <option value="supervisor">Supervisor</option>
-                </select>
-              </div>
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setNewMember({ name: "", email: "", phone: "", role: "field-officer" });
-                }}
-                disabled={saving}
-                className="flex-1 rounded-lg border border-white/10 py-2 text-sm text-white/60 hover:bg-white/5 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleAddMember}
-                disabled={saving}
-                className="flex-1 rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 py-2 text-sm font-medium text-white hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? "Adding..." : "Add Member"}
-              </button>
-            </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-amber-400 mb-1">
+                      <Activity className="w-4 h-4" />
+                      <span className="text-xs">Assigned</span>
+                    </div>
+                    <p className="text-2xl font-bold text-white">{member.stats?.assigned || 0}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-emerald-400 mb-1">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span className="text-xs">Done</span>
+                    </div>
+                    <p className="text-2xl font-bold text-white">{member.stats?.completed || 0}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openMessageModal(member)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Message
+                  </button>
+                  <button
+                    onClick={() => handleRemoveMember(member._id)}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Add Modal */}
+        <AnimatePresence>
+          {showAddModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setShowAddModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.9 }}
+                className="bg-slate-800 rounded-2xl p-8 max-w-md w-full"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-white">Add Team Member</h2>
+                  <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-white/10 rounded-lg">
+                    <X className="w-6 h-6 text-gray-400" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAddMember} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Name*</label>
+                    <input
+                      type="text"
+                      required
+                      value={newMember.name}
+                      onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Email*</label>
+                    <input
+                      type="email"
+                      required
+                      value={newMember.email}
+                      onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                      placeholder="john@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      value={newMember.phone}
+                      onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                      placeholder="+1234567890"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
+                    <select
+                      value={newMember.role}
+                      onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="field-officer">Field Officer</option>
+                      <option value="supervisor">Supervisor</option>
+                      <option value="inspector">Inspector</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Department</label>
+                    <input
+                      type="text"
+                      value={newMember.department}
+                      onChange={(e) => setNewMember({ ...newMember, department: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                      placeholder="Roads & Infrastructure"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddModal(false)}
+                      className="flex-1 px-6 py-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all"
+                    >
+                      Add Member
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Message Modal */}
+        <AnimatePresence>
+          {showMessageModal && selectedMember && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setShowMessageModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.9 }}
+                className="bg-slate-800 rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] flex flex-col"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                      {selectedMember.avatar}
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">{selectedMember.name}</h2>
+                      <p className="text-sm text-gray-400">{selectedMember.email}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowMessageModal(false)} className="p-2 hover:bg-white/10 rounded-lg">
+                    <X className="w-6 h-6 text-gray-400" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto mb-4 space-y-3 bg-white/5 rounded-lg p-4">
+                  {messages.length === 0 ? (
+                    <div className="text-center text-gray-400 py-8">
+                      <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No messages yet</p>
+                    </div>
+                  ) : (
+                    messages.map((msg, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex ${msg.from?.toString() === user.id?.toString() ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                            msg.from?.toString() === user.id?.toString()
+                              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                              : 'bg-white/10 text-gray-200'
+                          }`}
+                        >
+                          <p className="text-sm">{msg.message}</p>
+                          <p className="text-xs opacity-70 mt-1">
+                            {new Date(msg.timestamp).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type message..."
+                    className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newMessage.trim()}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
-}
+};
 
-export default TeamManagement;
+export { TeamManagement };

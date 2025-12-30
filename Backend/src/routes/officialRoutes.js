@@ -9,6 +9,8 @@ import {
   addTeamMember,
   removeTeamMember,
   sendMessage,
+  getMessages,
+  markMessagesRead,
   updateSettings,
   getAnalytics,
   createWorkOrder,
@@ -36,7 +38,9 @@ router.post('/team', requireOfficialAdmin, addTeamMember);
 router.delete('/team/:memberId', requireOfficialAdmin, removeTeamMember);
 
 // Communication
-router.post('/message', sendMessage);
+router.post('/message', requireOfficialAdmin, sendMessage);
+router.get('/messages/:memberId', requireOfficialAdmin, getMessages);
+router.patch('/messages/:memberId/mark-read', requireOfficialAdmin, markMessagesRead);
 
 // Settings
 router.patch('/settings', updateSettings);

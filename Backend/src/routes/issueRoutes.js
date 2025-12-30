@@ -3,6 +3,7 @@ import {
   createIssue,
   getMyIssues,
   getRecentIssues,
+  getAllIssues,
   getMapIssues,
   getNearbyIssues,
   upvoteIssue,
@@ -22,6 +23,7 @@ router.use(protect);
 router.post('/create', uploadIssueImages, createIssue);
 router.get('/my-issues', getMyIssues);
 router.get('/recent', getRecentIssues);
+router.get('/all', getAllIssues); // Must be before /:issueId
 router.get('/map', getMapIssues);
 router.get('/nearby', getNearbyIssues);
 router.get('/:issueId', getIssue);

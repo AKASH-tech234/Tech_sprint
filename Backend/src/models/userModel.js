@@ -60,6 +60,11 @@ const userSchema = new mongoose.Schema(
       department: String,
       designation: String,
       municipalityId: String,
+      addedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+      },
     },
     communityDetails: {
       organizationName: String,
