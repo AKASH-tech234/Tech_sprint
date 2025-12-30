@@ -41,11 +41,13 @@
 
 import express from "express";
 import Message from "../models/message.js";
-import authMiddleware from "../middleware/authMiddleware.js";
+import { protect } from "../middleware/authMiddleware.js";
+
 
 const router = express.Router();
 
-router.get("/:userId", authMiddleware, async (req, res) => {
+router.get("/:userId", protect, async (req, res) => {
+
   try {
     const myId = req.user._id;
     const otherUserId = req.params.userId;
