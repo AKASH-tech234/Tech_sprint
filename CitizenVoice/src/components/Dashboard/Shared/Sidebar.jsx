@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   TrendingUp,
   X,
+  MessageSquare,
 } from "lucide-react";
 
 // Menu configurations by role
@@ -48,7 +49,12 @@ const menuConfig = {
       label: "Assigned Issues",
       path: "/dashboard/official/assigned",
     },
-    { icon: Users, label: "Team Management", path: "/dashboard/official/team" },
+    { icon: Users, label: "Team Management", path: "/dashboard/official/team", adminOnly: true },
+    {
+      icon: MessageSquare,
+      label: "Messages",
+      path: "/dashboard/official/chat",
+    },
     {
       icon: BarChart3,
       label: "Analytics",
@@ -86,7 +92,7 @@ export function Sidebar({ isOpen, onClose, role = "citizen" }) {
   const menuItemsRaw = menuConfig[role] || menuConfig.citizen;
   const menuItems =
     role === 'official' && !isOfficialAdmin
-      ? menuItemsRaw.filter((item) => item.path !== '/dashboard/official/team')
+      ? menuItemsRaw.filter((item) => !item.adminOnly)
       : menuItemsRaw;
 
   const isActive = (path) => {

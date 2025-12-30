@@ -13,6 +13,7 @@ export { ReportIssue } from "./Citizen/reportissue";
 // Official Components
 export { IssueManagement } from "./Official/issuemanagment";
 export { TeamManagement } from "./Official/Teammanagement";
+export { TeamChat } from "./Official/TeamChat";
 export { Analytics } from "./Official/Analytics";
 
 // Community Components

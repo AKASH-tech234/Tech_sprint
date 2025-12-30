@@ -5,6 +5,7 @@ import { DashboardLayout } from "../../components/Dashboard/Shared/DashboardLayo
 import { StatsCard } from "../../components/Dashboard/Shared/StatsCard";
 import { IssueManagement } from "../../components/Dashboard/Official/issuemanagment";
 import { TeamManagement } from "../../components/Dashboard/Official/Teammanagement";
+import { TeamChat } from "../../components/Dashboard/Official/TeamChat";
 import { Analytics } from "../../components/Dashboard/Official/Analytics";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import { issueService } from "../../services/issueService";
@@ -18,6 +19,7 @@ import {
   MapPin,
   TrendingUp,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 
 // Mock stats (fallback)
@@ -96,6 +98,15 @@ function DashboardHome() {
 
   return (
     <div className="space-y-8">
+      {/* Floating Message Button */}
+      <button
+        onClick={() => navigate("/dashboard/official/chat")}
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all hover:scale-110"
+        title="Open Messages"
+      >
+        <MessageSquare className="h-6 w-6" />
+      </button>
+
       {/* Welcome section */}
       <div>
         <h1 className="text-2xl font-bold text-white sm:text-3xl">
@@ -107,7 +118,7 @@ function DashboardHome() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatsCard
           title="Pending Issues"
           value={loading ? "..." : stats.pending}
@@ -139,6 +150,13 @@ function DashboardHome() {
           trend="up"
           trendValue={8}
           onClick={() => navigate("/dashboard/official/analytics")}
+        />
+        <StatsCard
+          title="Messages"
+          value="Chat"
+          icon={MessageSquare}
+          color="rose"
+          onClick={() => navigate("/dashboard/official/chat")}
         />
       </div>
 
@@ -454,6 +472,8 @@ export default function OfficialDashboard() {
         <Route index element={<DashboardHome />} />
         <Route path="assigned" element={<IssueManagement />} />
         <Route path="team" element={<TeamManagement />} />
+        <Route path="chat" element={<TeamChat />} />
+        <Route path="chat/:memberId" element={<TeamChat />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="map" element={<MapPage />} />
         <Route path="heatmap" element={<MapPage />} />

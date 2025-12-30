@@ -423,42 +423,72 @@ const io = new Server(server, {
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
+      "http://localhost:5175",
     ],
     credentials: true,
   },
 });
+
+// Track online users
+const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
   console.log("🟢 Socket connected:", socket.id);
 
   socket.on("join", (userId) => {
     socket.join(userId);
+    onlineUsers.set(userId, socket.id);
     console.log(`👤 User ${userId} joined room`);
+    
+    // Broadcast user online status
+    io.emit("userOnline", userId);
   });
 
-  
-socket.on("sendMessage", async ({ senderId, receiverId, message }) => {
-  try {
-    const newMessage = await Message.create({
-      sender: senderId,
-      receiver: receiverId,
-      message,
-    });
+  socket.on("sendMessage", async ({ senderId, receiverId, message }) => {
+    try {
+      const newMessage = await Message.create({
+        sender: senderId,
+        receiver: receiverId,
+        message,
+        read: false,
+      });
 
-    io.to(receiverId).emit("receiveMessage", {
-      _id: newMessage._id,
-      senderId,
-      receiverId,
-      message,
-      createdAt: newMessage.createdAt,
-    });
-  } catch (error) {
-    console.error("❌ Message save failed:", error);
-  }
-});
+      const messageData = {
+        _id: newMessage._id,
+        senderId,
+        receiverId,
+        message,
+        createdAt: newMessage.createdAt,
+      };
 
+      // Send to receiver
+      io.to(receiverId).emit("receiveMessage", messageData);
+      
+      // Also send back to sender for confirmation
+      io.to(senderId).emit("messageSent", messageData);
+    } catch (error) {
+      console.error("❌ Message save failed:", error);
+      socket.emit("messageError", { error: "Failed to send message" });
+    }
+  });
+
+  socket.on("typing", ({ senderId, receiverId }) => {
+    io.to(receiverId).emit("userTyping", { userId: senderId });
+  });
+
+  socket.on("stopTyping", ({ senderId, receiverId }) => {
+    io.to(receiverId).emit("userStoppedTyping", { userId: senderId });
+  });
 
   socket.on("disconnect", () => {
+    // Find and remove user from online users
+    for (const [userId, socketId] of onlineUsers.entries()) {
+      if (socketId === socket.id) {
+        onlineUsers.delete(userId);
+        io.emit("userOffline", userId);
+        break;
+      }
+    }
     console.log("🔴 Socket disconnected:", socket.id);
   });
 });
@@ -469,6 +499,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
+      "http://localhost:5175",
     ],
     credentials: true,
   })
