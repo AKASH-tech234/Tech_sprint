@@ -21,18 +21,18 @@ A comprehensive Node.js/Express backend for the CitizenVoice civic engagement pl
 
 ## 🛠 Technology Stack
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Node.js** | 18+ | Runtime environment |
-| **Express** | 5.2.1 | Web framework |
-| **MongoDB** | - | NoSQL database |
-| **Mongoose** | 9.0.2 | MongoDB ODM |
-| **JWT** | 9.0.3 | Authentication tokens |
-| **bcryptjs** | 3.0.3 | Password hashing |
-| **Cloudinary** | 1.41.3 | Cloud image storage |
-| **Multer** | 2.0.2 | File upload handling |
-| **cookie-parser** | 1.4.7 | HTTP cookie parsing |
-| **google-auth-library** | 10.5.0 | Google OAuth integration |
+| Technology              | Version | Purpose                  |
+| ----------------------- | ------- | ------------------------ |
+| **Node.js**             | 18+     | Runtime environment      |
+| **Express**             | 5.2.1   | Web framework            |
+| **MongoDB**             | -       | NoSQL database           |
+| **Mongoose**            | 9.0.2   | MongoDB ODM              |
+| **JWT**                 | 9.0.3   | Authentication tokens    |
+| **bcryptjs**            | 3.0.3   | Password hashing         |
+| **Cloudinary**          | 1.41.3  | Cloud image storage      |
+| **Multer**              | 2.0.2   | File upload handling     |
+| **cookie-parser**       | 1.4.7   | HTTP cookie parsing      |
+| **google-auth-library** | 10.5.0  | Google OAuth integration |
 
 ---
 
@@ -115,7 +115,7 @@ Stores civic issues reported by citizens.
   issueId: String,            // Auto-generated: ISS-{timestamp}
   title: String,              // Max 200 chars
   description: String,        // Max 2000 chars
-  category: 'pothole' | 'streetlight' | 'garbage' | 'water' | 
+  category: 'pothole' | 'streetlight' | 'garbage' | 'water' |
             'traffic' | 'noise' | 'safety' | 'other',
   priority: 'low' | 'medium' | 'high',
   status: 'reported' | 'acknowledged' | 'in-progress' | 'resolved' | 'rejected',
@@ -170,18 +170,19 @@ Tracks team members and their communication with team leaders.
 
 ### Authentication Routes (`/api/auth`)
 
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| `POST` | `/signup` | Public | Register new user |
-| `POST` | `/login` | Public | Login with email/password |
-| `POST` | `/google` | Public | Google OAuth login |
-| `GET` | `/check` | Public | Verify authentication status |
-| `POST` | `/logout` | Public | Clear auth cookie |
-| `GET` | `/me` | Protected | Get current user details |
+| Method | Endpoint  | Access    | Description                  |
+| ------ | --------- | --------- | ---------------------------- |
+| `POST` | `/signup` | Public    | Register new user            |
+| `POST` | `/login`  | Public    | Login with email/password    |
+| `POST` | `/google` | Public    | Google OAuth login           |
+| `GET`  | `/check`  | Public    | Verify authentication status |
+| `POST` | `/logout` | Public    | Clear auth cookie            |
+| `GET`  | `/me`     | Protected | Get current user details     |
 
 #### Request/Response Examples:
 
 **POST /api/auth/signup**
+
 ```json
 // Request
 {
@@ -209,6 +210,7 @@ Tracks team members and their communication with team leaders.
 ```
 
 **POST /api/auth/login**
+
 ```json
 // Request
 {
@@ -238,33 +240,36 @@ Tracks team members and their communication with team leaders.
 
 All routes require authentication.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/create` | Create new issue (with images) |
-| `GET` | `/my-issues` | Get user's reported issues |
-| `GET` | `/recent` | Get recent issues (limit param) |
-| `GET` | `/all` | Get all issues with filters |
-| `GET` | `/map` | Get issues for map view (with bounds) |
-| `GET` | `/nearby` | Get nearby issues (lat/lng/radius) |
-| `GET` | `/:issueId` | Get single issue details |
-| `PUT` | `/:issueId` | Update issue |
-| `DELETE` | `/:issueId` | Delete issue |
-| `POST` | `/:issueId/upvote` | Toggle upvote on issue |
+| Method   | Endpoint           | Description                           |
+| -------- | ------------------ | ------------------------------------- |
+| `POST`   | `/create`          | Create new issue (with images)        |
+| `GET`    | `/my-issues`       | Get user's reported issues            |
+| `GET`    | `/recent`          | Get recent issues (limit param)       |
+| `GET`    | `/all`             | Get all issues with filters           |
+| `GET`    | `/map`             | Get issues for map view (with bounds) |
+| `GET`    | `/nearby`          | Get nearby issues (lat/lng/radius)    |
+| `GET`    | `/:issueId`        | Get single issue details              |
+| `PUT`    | `/:issueId`        | Update issue                          |
+| `DELETE` | `/:issueId`        | Delete issue                          |
+| `POST`   | `/:issueId/upvote` | Toggle upvote on issue                |
 
 #### Query Parameters:
 
 **GET /api/issues/all**
+
 - `status`: Filter by status (reported, acknowledged, in-progress, resolved, rejected)
 - `category`: Filter by category (pothole, streetlight, garbage, etc.)
 - `priority`: Filter by priority (low, medium, high)
 - `search`: Search in title/description
 
 **GET /api/issues/map**
+
 - `bounds`: `minLat,minLng,maxLat,maxLng`
 - `status`: Filter by status
 - `category`: Filter by category
 
 **GET /api/issues/nearby**
+
 - `lat`: Latitude (required)
 - `lng`: Longitude (required)
 - `radius`: Radius in meters (default: 2000)
@@ -275,27 +280,28 @@ All routes require authentication.
 
 All routes require authentication + `official` role.
 
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| `GET` | `/stats` | Official | Dashboard statistics |
-| `GET` | `/assigned` | Official | Get assigned issues |
-| `PATCH` | `/assign/:issueId` | **Admin Only** | Assign issue to team member |
-| `GET` | `/team` | **Admin Only** | Get team members list |
-| `POST` | `/team` | **Admin Only** | Add new team member |
-| `DELETE` | `/team/:memberId` | **Admin Only** | Remove team member |
-| `POST` | `/message` | **Admin Only** | Send message to team member |
-| `GET` | `/messages/:memberId` | **Admin Only** | Get message thread |
-| `PATCH` | `/messages/:memberId/mark-read` | **Admin Only** | Mark messages as read |
-| `PATCH` | `/settings` | Official | Update user settings |
-| `GET` | `/analytics` | Official | Get analytics data |
-| `POST` | `/quick-actions/work-order` | **Admin Only** | Create work order |
-| `POST` | `/quick-actions/inspection` | **Admin Only** | Schedule inspection |
-| `POST` | `/quick-actions/resources` | **Admin Only** | Request resources |
-| `POST` | `/quick-actions/report` | **Admin Only** | Generate report |
+| Method   | Endpoint                        | Access         | Description                 |
+| -------- | ------------------------------- | -------------- | --------------------------- |
+| `GET`    | `/stats`                        | Official       | Dashboard statistics        |
+| `GET`    | `/assigned`                     | Official       | Get assigned issues         |
+| `PATCH`  | `/assign/:issueId`              | **Admin Only** | Assign issue to team member |
+| `GET`    | `/team`                         | **Admin Only** | Get team members list       |
+| `POST`   | `/team`                         | **Admin Only** | Add new team member         |
+| `DELETE` | `/team/:memberId`               | **Admin Only** | Remove team member          |
+| `POST`   | `/message`                      | **Admin Only** | Send message to team member |
+| `GET`    | `/messages/:memberId`           | **Admin Only** | Get message thread          |
+| `PATCH`  | `/messages/:memberId/mark-read` | **Admin Only** | Mark messages as read       |
+| `PATCH`  | `/settings`                     | Official       | Update user settings        |
+| `GET`    | `/analytics`                    | Official       | Get analytics data          |
+| `POST`   | `/quick-actions/work-order`     | **Admin Only** | Create work order           |
+| `POST`   | `/quick-actions/inspection`     | **Admin Only** | Schedule inspection         |
+| `POST`   | `/quick-actions/resources`      | **Admin Only** | Request resources           |
+| `POST`   | `/quick-actions/report`         | **Admin Only** | Generate report             |
 
 #### Request Examples:
 
 **POST /api/officials/team** (Add Team Member)
+
 ```json
 {
   "name": "John Field Officer",
@@ -320,13 +326,15 @@ All routes require authentication + `official` role.
 ```
 
 **PATCH /api/officials/assign/:issueId**
+
 ```json
 {
-  "memberId": "user_id_here"  // The User._id (not TeamMember._id)
+  "memberId": "user_id_here" // The User._id (not TeamMember._id)
 }
 ```
 
 **POST /api/officials/message**
+
 ```json
 {
   "recipientId": "team_member_id",
@@ -356,7 +364,9 @@ The system uses HTTP-only cookies for secure token storage:
 ### Middleware
 
 #### `protect`
+
 Verifies JWT token from cookie or Authorization header:
+
 ```javascript
 // Checks:
 // 1. req.cookies.token (primary)
@@ -364,33 +374,38 @@ Verifies JWT token from cookie or Authorization header:
 ```
 
 #### `restrictTo(...roles)`
+
 Restricts access to specific roles:
+
 ```javascript
-router.use(restrictTo('official'));  // Only officials
+router.use(restrictTo("official")); // Only officials
 ```
 
 #### `requireOfficialAdmin`
+
 Restricts access to team leaders only:
+
 ```javascript
-router.patch('/assign/:issueId', requireOfficialAdmin, assignIssue);
+router.patch("/assign/:issueId", requireOfficialAdmin, assignIssue);
 ```
 
 ### Admin Permission Logic (`officialPermissions.js`)
 
 A user is considered an **Official Admin** (Team Leader) if:
+
 1. Their email matches `OFFICIAL_ADMIN_EMAIL` environment variable, OR
 2. Their `officialDetails.designation === 'team-lead'`
 
 ```javascript
 export const isOfficialAdmin = (user) => {
-  if (!user || user.role !== 'official') return false;
-  
+  if (!user || user.role !== "official") return false;
+
   // Check email allowlist
-  const allowlistedEmails = process.env.OFFICIAL_ADMIN_EMAIL?.split(',');
+  const allowlistedEmails = process.env.OFFICIAL_ADMIN_EMAIL?.split(",");
   if (allowlistedEmails?.includes(user.email)) return true;
-  
+
   // Check designation
-  return user.officialDetails?.designation === 'team-lead';
+  return user.officialDetails?.designation === "team-lead";
 };
 ```
 
@@ -401,17 +416,20 @@ export const isOfficialAdmin = (user) => {
 ### Features
 
 1. **Add Team Members**
+
    - Creates User account with `official` role
    - Creates TeamMember record linking to User
    - Generates temporary password
    - Sets `officialDetails.addedBy` to team leader
 
 2. **Remove Team Members**
+
    - Unassigns all issues from member
    - Deletes User account
    - Deletes TeamMember record
 
 3. **Assign Issues**
+
    - Only admin can assign issues
    - Auto-changes status to `in-progress`
    - Validates member exists and is official
@@ -448,26 +466,30 @@ The system supports both Cloudinary (cloud) and local storage:
 
 ```javascript
 // Set in .env
-USE_CLOUDINARY=true   // Use Cloudinary
-USE_CLOUDINARY=false  // Use local storage
+USE_CLOUDINARY = true; // Use Cloudinary
+USE_CLOUDINARY = false; // Use local storage
 ```
 
 ### Configuration
 
 **Cloudinary Storage:**
+
 - Folder: `citizenvoice/issues`
 - Allowed formats: jpg, jpeg, png, webp, gif
 - Auto resource type detection
 
 **Local Storage:**
+
 - Directory: `uploads/issues/`
 - Filename: `issue-{timestamp}-{random}.{ext}`
 
 ### Limits
+
 - Max file size: **5MB**
 - Max files per issue: **5 images**
 
 ### Image Cleanup
+
 When an issue is deleted, associated images are automatically removed from Cloudinary.
 
 ---
@@ -510,6 +532,7 @@ OFFICIAL_ADMIN_PASSWORD=secure_password  # Only for seed script
 ## 🚀 Setup & Installation
 
 ### Prerequisites
+
 - Node.js 18+
 - MongoDB Atlas account (or local MongoDB)
 - Cloudinary account (optional)
@@ -538,11 +561,11 @@ npm run dev
 
 ## 📜 Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm start` | Start production server |
-| `npm run dev` | Start development server with nodemon |
-| `npm run seed:official-admin` | Create/update official admin user |
+| Command                       | Description                           |
+| ----------------------------- | ------------------------------------- |
+| `npm start`                   | Start production server               |
+| `npm run dev`                 | Start development server with nodemon |
+| `npm run seed:official-admin` | Create/update official admin user     |
 
 ---
 
@@ -551,6 +574,7 @@ npm run dev
 All API responses follow a consistent format:
 
 ### Success Response
+
 ```json
 {
   "statusCode": 200,
@@ -561,6 +585,7 @@ All API responses follow a consistent format:
 ```
 
 ### Error Response
+
 ```json
 {
   "statusCode": 400,
@@ -577,15 +602,16 @@ Custom error handling with `ApiError` class:
 
 ```javascript
 // Throwing errors
-throw new ApiError(400, 'Validation failed');
-throw new ApiError(401, 'Unauthorized');
-throw new ApiError(403, 'Forbidden');
-throw new ApiError(404, 'Not found');
-throw new ApiError(409, 'Conflict - resource exists');
-throw new ApiError(500, 'Server error');
+throw new ApiError(400, "Validation failed");
+throw new ApiError(401, "Unauthorized");
+throw new ApiError(403, "Forbidden");
+throw new ApiError(404, "Not found");
+throw new ApiError(409, "Conflict - resource exists");
+throw new ApiError(500, "Server error");
 ```
 
 Multer errors are automatically handled:
+
 - `LIMIT_FILE_SIZE` → 400: File too large
 - `LIMIT_FILE_COUNT` → 400: Too many files
 - Invalid file type → 400: Invalid file type
@@ -597,11 +623,11 @@ Multer errors are automatically handled:
 ```javascript
 cors({
   origin: [
-    "http://localhost:5173",  // Vite dev server
-    "http://localhost:5174",  // Alternative port
+    "http://localhost:5173", // Vite dev server
+    "http://localhost:5174", // Alternative port
   ],
-  credentials: true,  // Required for cookies
-})
+  credentials: true, // Required for cookies
+});
 ```
 
 ---
@@ -609,9 +635,10 @@ cors({
 ## 📝 Development Notes
 
 1. **Route Order Matters**: Place specific routes before parameterized routes
+
    ```javascript
-   router.get('/all', getAllIssues);    // ✅ First
-   router.get('/:issueId', getIssue);   // ✅ After
+   router.get("/all", getAllIssues); // ✅ First
+   router.get("/:issueId", getIssue); // ✅ After
    ```
 
 2. **Password Never Returned**: User password is excluded by default (`select: false`)
