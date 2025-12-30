@@ -3,6 +3,8 @@
 .env.*
 Backend/.env
 Backend/.env.*
+CitizenVoice/.env
+CitizenVoice/.env.*
 
 # Node dependencies
 node_modules/

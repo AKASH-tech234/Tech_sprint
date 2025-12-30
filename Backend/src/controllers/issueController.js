@@ -1,10 +1,63 @@
 import Issue from '../models/Issue.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-import { AsyncHandler } from '../utils/AsyncHandler.js';
+import { asyncHandler } from '../utils/AsyncHandler.js';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Helper function to extract public_id from Cloudinary URL
+const getPublicIdFromUrl = (url) => {
+  try {
+    // Example URL: https://res.cloudinary.com/dmvg9skbm/image/upload/v1767029697/citizenvoice/issues/issue-1767029692617-276101587.png
+    // Extract: citizenvoice/issues/issue-1767029692617-276101587
+    const parts = url.split('/upload/');
+    if (parts.length < 2) return null;
+    
+    const pathParts = parts[1].split('/');
+    // Remove version (v1767029697) if present
+    const filteredParts = pathParts.filter(part => !part.startsWith('v'));
+    
+    // Join folder and filename, remove extension
+    const publicId = filteredParts.join('/').replace(/\.[^/.]+$/, '');
+    return publicId;
+  } catch (error) {
+    console.error('Error extracting public_id:', error);
+    return null;
+  }
+};
+
+// Helper function to delete images from Cloudinary
+const deleteImagesFromCloudinary = async (imageUrls) => {
+  if (!imageUrls || imageUrls.length === 0) return;
+  
+  const useCloudinary = process.env.USE_CLOUDINARY === 'true';
+  if (!useCloudinary) return;
+
+  const deletionResults = [];
+  
+  for (const url of imageUrls) {
+    try {
+      const publicId = getPublicIdFromUrl(url);
+      if (publicId) {
+        console.log(`🗑️ [Cloudinary] Deleting image: ${publicId}`);
+        const result = await cloudinary.uploader.destroy(publicId);
+        console.log(`✅ [Cloudinary] Deletion result:`, result);
+        deletionResults.push({ url, publicId, result });
+      }
+    } catch (error) {
+      console.error(`❌ [Cloudinary] Failed to delete image ${url}:`, error);
+      deletionResults.push({ url, error: error.message });
+    }
+  }
+  
+  return deletionResults;
+};
 
 // Create Issue
-export const createIssue = AsyncHandler(async (req, res) => {
+export const createIssue = asyncHandler(async (req, res) => {
+  console.log('📝 [CreateIssue] Request received');
+  console.log('📝 [CreateIssue] Body:', req.body);
+  console.log('📝 [CreateIssue] Files:', req.files ? req.files.length : 0);
+  
   const { title, description, category, priority, location } = req.body;
   
   // Parse location JSON string
@@ -21,23 +74,54 @@ export const createIssue = AsyncHandler(async (req, res) => {
   }
   
   // Get uploaded image URLs
+  const useCloudinary = process.env.USE_CLOUDINARY === 'true';
+  console.log(`📸 [CreateIssue] Using Cloudinary: ${useCloudinary}`);
+  
   const imageUrls = req.files ? req.files.map(file => {
+    console.log('📸 [CreateIssue] Processing file:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      path: file.path,
+      filename: file.filename
+    });
+    
+    // For Cloudinary, use the path provided by Cloudinary
+    if (useCloudinary) {
+      console.log('☁️ [CreateIssue] Using Cloudinary path:', file.path);
+      return file.path;
+    }
     // For local storage
-    return `${req.protocol}://${req.get('host')}/uploads/issues/${file.filename}`;
-    // For Cloudinary
-    // return file.path;
+    const localPath = `${req.protocol}://${req.get('host')}/uploads/issues/${file.filename}`;
+    console.log('💾 [CreateIssue] Using local path:', localPath);
+    return localPath;
   }) : [];
   
+  console.log('📸 [CreateIssue] Final image URLs:', imageUrls);
+  
   // Create issue
-  const issue = await Issue.create({
-    title,
-    description,
-    category,
-    priority: priority || 'medium',
-    location: locationData,
-    images: imageUrls,
-    reportedBy: req.user._id
-  });
+  let issue;
+  try {
+    issue = await Issue.create({
+      title,
+      description,
+      category,
+      priority: priority || 'medium',
+      location: locationData,
+      images: imageUrls,
+      reportedBy: req.user._id
+    });
+    
+    console.log('✅ [CreateIssue] Issue created with images:', issue.images);
+  } catch (error) {
+    // If database save fails, clean up uploaded images from Cloudinary
+    if (imageUrls.length > 0 && useCloudinary) {
+      console.log('❌ [CreateIssue] Database save failed, cleaning up Cloudinary images');
+      await deleteImagesFromCloudinary(imageUrls);
+    }
+    throw error; // Re-throw the error
+  }
   
   // Populate user details
   await issue.populate('reportedBy', 'username email avatar');
@@ -48,7 +132,7 @@ export const createIssue = AsyncHandler(async (req, res) => {
 });
 
 // Get User's Issues
-export const getMyIssues = AsyncHandler(async (req, res) => {
+export const getMyIssues = asyncHandler(async (req, res) => {
   const { status, category } = req.query;
   
   const query = { reportedBy: req.user._id };
@@ -72,7 +156,7 @@ export const getMyIssues = AsyncHandler(async (req, res) => {
 });
 
 // Get Recent Issues
-export const getRecentIssues = AsyncHandler(async (req, res) => {
+export const getRecentIssues = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 6;
   
   const issues = await Issue.find()
@@ -86,7 +170,7 @@ export const getRecentIssues = AsyncHandler(async (req, res) => {
 });
 
 // Get Issues for Map
-export const getMapIssues = AsyncHandler(async (req, res) => {
+export const getMapIssues = asyncHandler(async (req, res) => {
   const { bounds, status, category } = req.query;
   
   const query = {};
@@ -116,7 +200,7 @@ export const getMapIssues = AsyncHandler(async (req, res) => {
 });
 
 // Get Nearby Issues
-export const getNearbyIssues = AsyncHandler(async (req, res) => {
+export const getNearbyIssues = asyncHandler(async (req, res) => {
   const { lat, lng, radius } = req.query;
   
   if (!lat || !lng) {
@@ -167,7 +251,7 @@ export const getNearbyIssues = AsyncHandler(async (req, res) => {
 });
 
 // Upvote Issue
-export const upvoteIssue = AsyncHandler(async (req, res) => {
+export const upvoteIssue = asyncHandler(async (req, res) => {
   const { issueId } = req.params;
   
   const issue = await Issue.findById(issueId);
@@ -180,9 +264,11 @@ export const upvoteIssue = AsyncHandler(async (req, res) => {
   const userId = req.user._id;
   const upvoteIndex = issue.upvotes.indexOf(userId);
   
+  let action = 'added';
   if (upvoteIndex > -1) {
     // Remove upvote
     issue.upvotes.splice(upvoteIndex, 1);
+    action = 'removed';
   } else {
     // Add upvote
     issue.upvotes.push(userId);
@@ -190,13 +276,95 @@ export const upvoteIssue = AsyncHandler(async (req, res) => {
   
   await issue.save();
   
+  console.log(`👍 [Upvote] User ${req.user.username} ${action} upvote for issue ${issueId}`);
+  
   res.json(
-    new ApiResponse(200, { upvotes: issue.upvotes.length }, 'Upvote updated')
+    new ApiResponse(200, { 
+      upvotes: issue.upvotes.length, 
+      hasUpvoted: action === 'added',
+      action 
+    }, `Upvote ${action}`)
+  );
+});
+
+// Get Single Issue
+export const getIssue = asyncHandler(async (req, res) => {
+  const { issueId } = req.params;
+  
+  const issue = await Issue.findById(issueId)
+    .populate('reportedBy', 'username avatar email')
+    .populate('assignedTo', 'username email');
+  
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  
+  res.json(
+    new ApiResponse(200, issue, 'Issue fetched successfully')
+  );
+});
+
+// Update Issue
+export const updateIssue = asyncHandler(async (req, res) => {
+  const { issueId } = req.params;
+  const { title, description, category, priority, location, status } = req.body;
+  
+  const issue = await Issue.findById(issueId);
+  
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  
+  // Check ownership or admin rights
+  if (issue.reportedBy.toString() !== req.user._id.toString() && req.user.role !== 'official') {
+    throw new ApiError(403, 'Not authorized to update this issue');
+  }
+  
+  // Update fields
+  if (title) issue.title = title;
+  if (description) issue.description = description;
+  if (category) issue.category = category;
+  if (priority) issue.priority = priority;
+  if (status) issue.status = status;
+  
+  if (location) {
+    const parsedLocation = typeof location === 'string' ? JSON.parse(location) : location;
+    issue.location = parsedLocation;
+  }
+  
+  // Handle new images
+  if (req.files && req.files.length > 0) {
+    const useCloudinary = process.env.USE_CLOUDINARY === 'true';
+    
+    // If replacing images (not appending), delete old images from Cloudinary
+    const shouldReplaceImages = req.body.replaceImages === 'true';
+    
+    if (shouldReplaceImages && issue.images && issue.images.length > 0) {
+      console.log(`🗑️ [UpdateIssue] Replacing images, deleting ${issue.images.length} old images`);
+      await deleteImagesFromCloudinary(issue.images);
+      issue.images = []; // Clear old images
+    }
+    
+    const newImages = req.files.map(file => {
+      if (useCloudinary) {
+        return file.path;
+      }
+      return `${req.protocol}://${req.get('host')}/uploads/issues/${file.filename}`;
+    });
+    
+    console.log(`📸 [UpdateIssue] Adding ${newImages.length} new images`);
+    issue.images = [...issue.images, ...newImages];
+  }
+  
+  await issue.save();
+  
+  res.json(
+    new ApiResponse(200, issue, 'Issue updated successfully')
   );
 });
 
 // Delete Issue
-export const deleteIssue = AsyncHandler(async (req, res) => {
+export const deleteIssue = asyncHandler(async (req, res) => {
   const { issueId } = req.params;
   
   const issue = await Issue.findById(issueId);
@@ -208,6 +376,12 @@ export const deleteIssue = AsyncHandler(async (req, res) => {
   // Check ownership
   if (issue.reportedBy.toString() !== req.user._id.toString()) {
     throw new ApiError(403, 'Not authorized to delete this issue');
+  }
+  
+  // Delete all associated images from Cloudinary before deleting from database
+  if (issue.images && issue.images.length > 0) {
+    console.log(`🗑️ [DeleteIssue] Deleting ${issue.images.length} images from Cloudinary`);
+    await deleteImagesFromCloudinary(issue.images);
   }
   
   await issue.deleteOne();

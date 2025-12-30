@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "../../../lib/utils";
 import { IssueCard } from "./issuecard";
-// import { issueService } from "../../../services/issueService"; // Uncomment when backend is ready
+import { issueService } from "../../../services/issueService";
+import { ReportIssue } from "./reportissue";
 import {
   Search,
   Filter,
@@ -112,55 +113,27 @@ export function MyIssues({ onViewIssue }) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [editingIssue, setEditingIssue] = useState(null);
 
   const fetchIssues = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      /**
-       * BACKEND API CALL: Get User's Issues
-       * Endpoint: GET /api/issues/my-issues?status={status}&category={category}
-       * Headers: Authorization: Bearer {token} or use cookies
-       * Response: { success: true, issues: [...], total: number }
-       */
+      // Build query parameters for filtering
+      const params = {};
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (categoryFilter !== "all") params.category = categoryFilter;
       
-      // Uncomment when backend is ready:
-      // const params = new URLSearchParams();
-      // if (statusFilter !== "all") params.append("status", statusFilter);
-      // if (categoryFilter !== "all") params.append("category", categoryFilter);
-      // const data = await issueService.getMyIssues(params.toString());
-      // setIssues(data.issues);
-
-      // Fetch from localStorage + mock data for now
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Fetch user's own issues from backend
+      const data = await issueService.getMyIssues(params);
       
-      // Get user-created issues from localStorage
-      const userIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
-      
-      // Combine with mock data
-      let allIssues = [...userIssues, ...mockIssues];
-      
-      // Remove duplicates by ID
-      allIssues = allIssues.filter((issue, index, self) =>
-        index === self.findIndex((i) => i.id === issue.id)
-      );
-      
-      // Apply filters
-      let filtered = allIssues;
-      if (statusFilter !== "all") {
-        filtered = filtered.filter((i) => i.status === statusFilter);
-      }
-      if (categoryFilter !== "all") {
-        filtered = filtered.filter((i) => i.category === categoryFilter);
-      }
-      
-      // Sort by creation date (newest first)
-      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      
-      setIssues(filtered);
+      // The backend response structure: { success: true, data: { issues: [...], total: number } }
+      setIssues(data.data.issues || []);
     } catch (err) {
+      console.error("Error fetching my issues:", err);
       setError(err.message || "Failed to fetch issues");
+      setIssues([]);
     } finally {
       setLoading(false);
     }
@@ -170,54 +143,39 @@ export function MyIssues({ onViewIssue }) {
     fetchIssues();
   }, [fetchIssues, refreshTrigger]);
 
-  // Listen for storage changes (when issue is created from another component)
+  // Listen for custom events when a new issue is created
   useEffect(() => {
-    const handleStorageChange = () => {
-      console.log("Storage changed, refreshing issues...");
+    const handleIssueCreated = () => {
+      console.log("New issue created, refreshing...");
       setRefreshTrigger(prev => prev + 1);
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Custom event for same-tab updates
-    window.addEventListener('issueCreated', handleStorageChange);
+    window.addEventListener('issueCreated', handleIssueCreated);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('issueCreated', handleStorageChange);
+      window.removeEventListener('issueCreated', handleIssueCreated);
     };
   }, []);
 
   const handleUpvote = async (issueId) => {
     try {
-      /**
-       * BACKEND API CALL: Upvote Issue
-       * Endpoint: POST /api/issues/{issueId}/upvote
-       * Returns: { success: true, upvotes: number }
-       */
+      // Call backend API to upvote
+      const response = await issueService.upvoteIssue(issueId);
       
-      // Uncomment when backend is ready:
-      // await issueService.upvoteIssue(issueId);
-      
-      // Update local state
+      // Update local state with the new upvotes count from server
       setIssues((prev) =>
         prev.map((issue) =>
-          issue.id === issueId
-            ? { ...issue, upvotes: issue.upvotes + 1 }
+          issue._id === issueId
+            ? { ...issue, upvotes: Array.isArray(issue.upvotes) ? [...issue.upvotes] : [], upvoteCount: response.data.upvotes }
             : issue
         )
       );
       
-      // Update localStorage if it's a user issue
-      const userIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
-      const updatedUserIssues = userIssues.map((issue) =>
-        issue.id === issueId
-          ? { ...issue, upvotes: issue.upvotes + 1 }
-          : issue
-      );
-      localStorage.setItem('userIssues', JSON.stringify(updatedUserIssues));
+      console.log("✅ Issue upvoted:", issueId);
     } catch (err) {
       console.error("Failed to upvote:", err);
+      setError("Failed to upvote issue. Please try again.");
+      setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -225,25 +183,54 @@ export function MyIssues({ onViewIssue }) {
     if (!confirm("Are you sure you want to delete this issue?")) return;
     
     try {
-      /**
-       * BACKEND API CALL: Delete Issue
-       * Endpoint: DELETE /api/issues/{issueId}
-       * Returns: { success: true, message: "Issue deleted" }
-       */
-      
-      // Uncomment when backend is ready:
-      // await issueService.deleteIssue(issueId);
+      // Call backend API to delete
+      await issueService.deleteIssue(issueId);
       
       // Remove from local state
-      setIssues((prev) => prev.filter((issue) => issue.id !== issueId));
+      setIssues((prev) => prev.filter((issue) => issue._id !== issueId));
       
-      // Remove from localStorage
-      const userIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
-      const updatedUserIssues = userIssues.filter((issue) => issue.id !== issueId);
-      localStorage.setItem('userIssues', JSON.stringify(updatedUserIssues));
+      // Dispatch custom event to notify dashboard
+      window.dispatchEvent(new CustomEvent('issueDeleted', { 
+        detail: { issueId } 
+      }));
+      console.log("✅ Issue deleted and event dispatched:", issueId);
     } catch (err) {
       console.error("Failed to delete issue:", err);
       setError("Failed to delete issue. Please try again.");
+    }
+  };
+
+  const handleUpdateIssue = (issue) => {
+    // Set the issue to edit - this will open the edit modal
+    setEditingIssue(issue);
+  };
+
+  const handleUpdateComplete = async (updatedData) => {
+    try {
+      // Call backend API to update
+      const response = await issueService.updateIssue(editingIssue._id, updatedData);
+      
+      // Update local state
+      setIssues((prev) =>
+        prev.map((issue) =>
+          issue._id === editingIssue._id ? response.data : issue
+        )
+      );
+      
+      // Close the edit modal
+      setEditingIssue(null);
+      
+      // Dispatch custom event to notify dashboard
+      window.dispatchEvent(new CustomEvent('issueUpdated', { 
+        detail: { issue: response.data } 
+      }));
+      console.log("✅ Issue updated and event dispatched:", response.data._id);
+      
+      // Refresh the list
+      setRefreshTrigger(prev => prev + 1);
+    } catch (err) {
+      console.error("Failed to update issue:", err);
+      setError("Failed to update issue. Please try again.");
     }
   };
 
@@ -422,16 +409,28 @@ export function MyIssues({ onViewIssue }) {
         >
           {filteredIssues.map((issue) => (
             <IssueCard
-              key={issue.id}
+              key={issue._id || issue.id}
               issue={issue}
               variant={viewMode === "list" ? "compact" : "default"}
               onView={onViewIssue}
               onUpvote={handleUpvote}
               onDelete={handleDeleteIssue}
+              onUpdate={handleUpdateIssue}
               showActions={true}
             />
           ))}
         </div>
+      )}
+
+      {/* Edit Issue Modal */}
+      {editingIssue && (
+        <ReportIssue
+          isOpen={true}
+          onClose={() => setEditingIssue(null)}
+          onSuccess={handleUpdateComplete}
+          editMode={true}
+          initialData={editingIssue}
+        />
       )}
     </div>
   );

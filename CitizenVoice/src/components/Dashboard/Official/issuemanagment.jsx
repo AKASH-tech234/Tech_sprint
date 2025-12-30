@@ -1,5 +1,5 @@
 // src/components/Dashboard/Official/IssueManagement.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "../../../lib/utils";
 import {
   Search,
@@ -15,12 +15,13 @@ import {
   ArrowUpRight,
   Loader2,
 } from "lucide-react";
+import { issueService } from "../../../services/issueService";
 
-// Status configuration
+// Status configuration - Updated to match backend statuses
 const statusConfig = {
-  new: { label: "New", color: "bg-gray-500/20 text-gray-400", order: 0 },
-  assigned: {
-    label: "Assigned",
+  reported: { label: "Reported", color: "bg-gray-500/20 text-gray-400", order: 0 },
+  acknowledged: {
+    label: "Acknowledged",
     color: "bg-blue-500/20 text-blue-400",
     order: 1,
   },
@@ -29,14 +30,14 @@ const statusConfig = {
     color: "bg-amber-500/20 text-amber-400",
     order: 2,
   },
-  "under-review": {
-    label: "Under Review",
-    color: "bg-violet-500/20 text-violet-400",
-    order: 3,
-  },
   resolved: {
     label: "Resolved",
     color: "bg-emerald-500/20 text-emerald-400",
+    order: 3,
+  },
+  rejected: {
+    label: "Rejected",
+    color: "bg-rose-500/20 text-rose-400",
     order: 4,
   },
 };
@@ -47,83 +48,132 @@ const priorityConfig = {
   low: { label: "Low", color: "text-emerald-400", bg: "bg-emerald-500/20" },
 };
 
-// Mock data
-const mockIssues = [
-  {
-    id: "ISS-001",
-    title: "Large pothole on Main Street",
-    category: "pothole",
-    priority: "high",
-    status: "in-progress",
-    assignee: { id: 1, name: "John Doe", avatar: "JD" },
-    location: "123 Main Street",
-    createdAt: "2024-12-20T10:30:00Z",
-    reporter: "Jane Smith",
-  },
-  {
-    id: "ISS-002",
-    title: "Broken street light",
-    category: "streetlight",
-    priority: "medium",
-    status: "new",
-    assignee: null,
-    location: "45 Oak Avenue",
-    createdAt: "2024-12-22T08:00:00Z",
-    reporter: "Mike Johnson",
-  },
-  {
-    id: "ISS-003",
-    title: "Garbage overflow",
-    category: "garbage",
-    priority: "medium",
-    status: "assigned",
-    assignee: { id: 2, name: "Sarah Wilson", avatar: "SW" },
-    location: "Central Park",
-    createdAt: "2024-12-24T14:00:00Z",
-    reporter: "Tom Brown",
-  },
-  {
-    id: "ISS-004",
-    title: "Water leak on sidewalk",
-    category: "water",
-    priority: "high",
-    status: "under-review",
-    assignee: { id: 1, name: "John Doe", avatar: "JD" },
-    location: "78 Pine Street",
-    createdAt: "2024-12-18T11:30:00Z",
-    reporter: "Emily Davis",
-  },
-  {
-    id: "ISS-005",
-    title: "Traffic signal malfunction",
-    category: "traffic",
-    priority: "high",
-    status: "new",
-    assignee: null,
-    location: "Main & 5th Intersection",
-    createdAt: "2024-12-25T09:00:00Z",
-    reporter: "Chris Lee",
-  },
-];
-
-const mockTeamMembers = [
-  { id: 1, name: "John Doe", avatar: "JD", role: "Field Officer" },
-  { id: 2, name: "Sarah Wilson", avatar: "SW", role: "Team Lead" },
-  { id: 3, name: "Mike Chen", avatar: "MC", role: "Field Officer" },
-];
-
 export function IssueManagement({ viewMode = "kanban" }) {
-  const [issues, setIssues] = useState(mockIssues);
-  // const [loading, setLoading] = useState(false); // Uncomment when API is ready
+  const [issues, setIssues] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [view, setView] = useState(viewMode); // kanban | table
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [updating, setUpdating] = useState(false);
+
+  // Fetch issues on component mount
+  useEffect(() => {
+    loadIssues();
+    loadTeamMembers();
+  }, []);
+
+  const loadIssues = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // TODO: Backend team - Implement issues endpoint:
+      // GET /api/issues/recent
+      // Response: { issues: [...] }
+      
+      // Uncomment when backend is ready:
+      // const response = await issueService.getIssues();
+      // const issuesData = response.data?.issues || response.issues || [];
+      // setIssues(issuesData);
+      
+      // Using mock data until backend is ready
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const mockIssues = [
+        {
+          _id: "1",
+          issueId: "ISS-001",
+          title: "Large pothole causing accidents on Main Street",
+          description: "Dangerous pothole near intersection",
+          status: "reported",
+          priority: "high",
+          location: { address: "123 Main Street" },
+          createdAt: new Date().toISOString(),
+          assignedTo: null,
+        },
+        {
+          _id: "2",
+          issueId: "ISS-002",
+          title: "Street light not working",
+          description: "Dark area at night",
+          status: "acknowledged",
+          priority: "medium",
+          location: { address: "45 Oak Avenue" },
+          createdAt: new Date().toISOString(),
+          assignedTo: { _id: "1", username: "John Doe" },
+        },
+        {
+          _id: "3",
+          issueId: "ISS-003",
+          title: "Garbage collection missed",
+          description: "Trash piling up",
+          status: "in-progress",
+          priority: "medium",
+          location: { address: "78 Pine Road" },
+          createdAt: new Date().toISOString(),
+          assignedTo: { _id: "2", username: "Sarah Wilson" },
+        },
+        {
+          _id: "4",
+          issueId: "ISS-004",
+          title: "Water main leak flooding street",
+          description: "Emergency repair needed",
+          status: "in-progress",
+          priority: "high",
+          location: { address: "90 Elm Street" },
+          createdAt: new Date().toISOString(),
+          assignedTo: { _id: "1", username: "John Doe" },
+        },
+        {
+          _id: "5",
+          issueId: "ISS-005",
+          title: "Traffic signal malfunction",
+          description: "Safety hazard",
+          status: "resolved",
+          priority: "high",
+          location: { address: "Main & 5th Intersection" },
+          createdAt: new Date().toISOString(),
+          assignedTo: { _id: "3", username: "Mike Chen" },
+        },
+      ];
+      setIssues(mockIssues);
+    } catch (err) {
+      console.error("Error loading issues:", err);
+      setError(err.message || "Failed to load issues");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTeamMembers = async () => {
+    try {
+      // TODO: Backend team - Implement team members endpoint:
+      // GET /api/officials/team
+      // Response: { members: [...] }
+      
+      // Uncomment when backend is ready:
+      // const response = await issueService.getTeamMembers();
+      // setTeamMembers(response.data?.members || []);
+      
+      // Use mock team members until backend is ready
+      setTeamMembers([
+        { _id: "1", username: "John Doe", role: "Field Officer" },
+        { _id: "2", username: "Sarah Wilson", role: "Team Lead" },
+        { _id: "3", username: "Mike Chen", role: "Field Officer" },
+        { _id: "4", username: "Emily Davis", role: "Field Officer" },
+      ]);
+    } catch (err) {
+      console.error("Error loading team members:", err);
+      setTeamMembers([]);
+    }
+  };
 
   const filteredIssues = issues.filter(
     (issue) =>
       issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      issue.id.toLowerCase().includes(searchQuery.toLowerCase())
+      (issue.issueId && issue.issueId.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const groupedByStatus = Object.keys(statusConfig).reduce((acc, status) => {
@@ -131,24 +181,123 @@ export function IssueManagement({ viewMode = "kanban" }) {
     return acc;
   }, {});
 
-  const handleStatusChange = (issueId, newStatus) => {
-    setIssues((prev) =>
-      prev.map((issue) =>
-        issue.id === issueId ? { ...issue, status: newStatus } : issue
-      )
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-rose-500 mx-auto mb-4" />
+          <p className="text-white/60">Loading issues...</p>
+        </div>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-rose-500 mx-auto mb-4" />
+          <p className="text-rose-400 mb-2">Failed to load issues</p>
+          <p className="text-white/60 text-sm mb-4">{error}</p>
+          <button
+            onClick={loadIssues}
+            className="px-4 py-2 rounded-lg bg-rose-500 text-white hover:bg-rose-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleStatusChange = async (issueId, newStatus) => {
+    try {
+      setUpdating(true);
+      
+      // TODO: Backend team - Implement update issue endpoint:
+      // PUT /api/issues/:id
+      // Body: { status: newStatus }
+      
+      // Uncomment when backend is ready:
+      // await issueService.updateIssue(issueId, { status: newStatus });
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update local state
+      setIssues((prev) =>
+        prev.map((issue) =>
+          issue._id === issueId ? { ...issue, status: newStatus } : issue
+        )
+      );
+      
+      // Show success feedback
+      console.log(`Issue ${issueId} status updated to ${newStatus}`);
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("Failed to update issue status. Please try again.");
+    } finally {
+      setUpdating(false);
+    }
   };
 
-  const handleAssign = (issueId, member) => {
-    setIssues((prev) =>
-      prev.map((issue) =>
-        issue.id === issueId
-          ? { ...issue, assignee: member, status: "assigned" }
-          : issue
-      )
-    );
-    setShowAssignModal(false);
-    setSelectedIssue(null);
+  const handleAssign = async (issueId, member) => {
+    try {
+      setUpdating(true);
+      
+      // TODO: Backend team - Implement assign issue endpoint:
+      // PATCH /api/officials/assign/:issueId
+      // Body: { memberId: member._id }
+      
+      // Uncomment when backend is ready:
+      // await issueService.assignIssue(issueId, member._id);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update local state
+      setIssues((prev) =>
+        prev.map((issue) =>
+          issue._id === issueId
+            ? { ...issue, assignedTo: member, status: "acknowledged" }
+            : issue
+        )
+      );
+      setShowAssignModal(false);
+      setSelectedIssue(null);
+      
+      console.log(`Issue ${issueId} assigned to ${member.username}`);
+    } catch (err) {
+      console.error("Error assigning issue:", err);
+      alert("Failed to assign issue. Please try again.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteIssue = async (issueId) => {
+    if (!confirm("Are you sure you want to delete this issue?")) return;
+    
+    try {
+      setUpdating(true);
+      
+      // TODO: Backend team - Implement delete issue endpoint:
+      // DELETE /api/issues/:id
+      
+      // Uncomment when backend is ready:
+      // await issueService.deleteIssue(issueId);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setIssues((prev) => prev.filter((issue) => issue._id !== issueId));
+      console.log(`Issue ${issueId} deleted successfully`);
+    } catch (err) {
+      console.error("Error deleting issue:", err);
+      alert("Failed to delete issue. Please try again.");
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const formatDate = (date) => {
@@ -233,11 +382,11 @@ export function IssueManagement({ viewMode = "kanban" }) {
               <div className="flex-1 space-y-3 p-3">
                 {groupedByStatus[status]?.map((issue) => (
                   <div
-                    key={issue.id}
+                    key={issue._id}
                     className="group rounded-lg border border-white/10 bg-black/30 p-4 transition-all hover:border-rose-500/30"
                   >
                     <div className="mb-2 flex items-start justify-between">
-                      <span className="text-xs text-white/40">{issue.id}</span>
+                      <span className="text-xs text-white/40">{issue.issueId}</span>
                       <span
                         className={cn(
                           "rounded px-1.5 py-0.5 text-xs",
@@ -253,16 +402,16 @@ export function IssueManagement({ viewMode = "kanban" }) {
                     </h4>
                     <div className="mb-3 flex items-center gap-2 text-xs text-white/40">
                       <MapPin className="h-3 w-3" />
-                      <span className="truncate">{issue.location}</span>
+                      <span className="truncate">{issue.location?.address || 'Unknown location'}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      {issue.assignee ? (
+                      {issue.assignedTo ? (
                         <div className="flex items-center gap-2">
                           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-xs font-medium text-white">
-                            {issue.assignee.avatar}
+                            {issue.assignedTo.username?.substring(0, 2).toUpperCase()}
                           </div>
                           <span className="text-xs text-white/60">
-                            {issue.assignee.name}
+                            {issue.assignedTo.username}
                           </span>
                         </div>
                       ) : (
@@ -272,6 +421,7 @@ export function IssueManagement({ viewMode = "kanban" }) {
                             setShowAssignModal(true);
                           }}
                           className="text-xs text-rose-400 hover:text-rose-300"
+                          disabled={updating}
                         >
                           Assign
                         </button>
@@ -280,21 +430,21 @@ export function IssueManagement({ viewMode = "kanban" }) {
                         <button
                           onClick={() =>
                             handleStatusChange(
-                              issue.id,
-                              status === "new"
-                                ? "assigned"
-                                : status === "assigned"
+                              issue._id,
+                              status === "reported"
+                                ? "acknowledged"
+                                : status === "acknowledged"
                                 ? "in-progress"
                                 : status === "in-progress"
-                                ? "under-review"
-                                : status === "under-review"
                                 ? "resolved"
                                 : status
                             )
                           }
                           className="rounded p-1 text-white/40 hover:bg-white/10 hover:text-white"
+                          disabled={updating || status === "resolved"}
+                          title="Move to next stage"
                         >
-                          <ArrowUpRight className="h-4 w-4" />
+                          {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
@@ -346,11 +496,11 @@ export function IssueManagement({ viewMode = "kanban" }) {
             <tbody>
               {filteredIssues.map((issue) => (
                 <tr
-                  key={issue.id}
+                  key={issue._id}
                   className="border-b border-white/5 transition-colors hover:bg-white/5"
                 >
                   <td className="px-4 py-3 text-sm text-white/60">
-                    {issue.id}
+                    {issue.issueId}
                   </td>
                   <td className="max-w-[200px] px-4 py-3">
                     <span className="text-sm text-white line-clamp-1">
@@ -372,10 +522,11 @@ export function IssueManagement({ viewMode = "kanban" }) {
                     <select
                       value={issue.status}
                       onChange={(e) =>
-                        handleStatusChange(issue.id, e.target.value)
+                        handleStatusChange(issue._id, e.target.value)
                       }
+                      disabled={updating}
                       className={cn(
-                        "rounded border-none bg-transparent px-2 py-1 text-xs outline-none",
+                        "rounded border-none bg-transparent px-2 py-1 text-xs outline-none cursor-pointer",
                         statusConfig[issue.status]?.color
                       )}
                     >
@@ -387,13 +538,13 @@ export function IssueManagement({ viewMode = "kanban" }) {
                     </select>
                   </td>
                   <td className="px-4 py-3">
-                    {issue.assignee ? (
+                    {issue.assignedTo ? (
                       <div className="flex items-center gap-2">
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-xs text-white">
-                          {issue.assignee.avatar}
+                          {issue.assignedTo.username?.substring(0, 2).toUpperCase()}
                         </div>
                         <span className="text-xs text-white/60">
-                          {issue.assignee.name}
+                          {issue.assignedTo.username}
                         </span>
                       </div>
                     ) : (
@@ -402,20 +553,26 @@ export function IssueManagement({ viewMode = "kanban" }) {
                           setSelectedIssue(issue);
                           setShowAssignModal(true);
                         }}
-                        className="text-xs text-rose-400"
+                        disabled={updating}
+                        className="text-xs text-rose-400 hover:text-rose-300"
                       >
                         Assign
                       </button>
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-white/40">
-                    {issue.location}
+                    {issue.location?.address || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm text-white/40">
                     {formatDate(issue.createdAt)}
                   </td>
                   <td className="px-4 py-3">
-                    <button className="rounded p-1 text-white/40 hover:bg-white/10 hover:text-white">
+                    <button 
+                      onClick={() => handleDeleteIssue(issue._id)}
+                      disabled={updating}
+                      className="rounded p-1 text-white/40 hover:bg-rose-500/20 hover:text-rose-400"
+                      title="Delete issue"
+                    >
                       <MoreVertical className="h-4 w-4" />
                     </button>
                   </td>
@@ -434,27 +591,32 @@ export function IssueManagement({ viewMode = "kanban" }) {
               Assign Issue
             </h3>
             <p className="mb-4 text-sm text-white/60">
-              Assign <span className="text-white">{selectedIssue.id}</span> to a
+              Assign <span className="text-white">{selectedIssue.issueId}</span> to a
               team member
             </p>
             <div className="space-y-2">
-              {mockTeamMembers.map((member) => (
-                <button
-                  key={member.id}
-                  onClick={() => handleAssign(selectedIssue.id, member)}
-                  className="flex w-full items-center gap-3 rounded-lg border border-white/10 p-3 text-left transition-colors hover:border-rose-500/30 hover:bg-white/5"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 font-medium text-white">
-                    {member.avatar}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      {member.name}
-                    </p>
-                    <p className="text-xs text-white/60">{member.role}</p>
-                  </div>
-                </button>
-              ))}
+              {teamMembers.length > 0 ? (
+                teamMembers.map((member) => (
+                  <button
+                    key={member._id}
+                    onClick={() => handleAssign(selectedIssue._id, member)}
+                    disabled={updating}
+                    className="flex w-full items-center gap-3 rounded-lg border border-white/10 p-3 text-left transition-colors hover:border-rose-500/30 hover:bg-white/5 disabled:opacity-50"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 font-medium text-white">
+                      {member.username?.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {member.username}
+                      </p>
+                      <p className="text-xs text-white/60">{member.role || 'Team Member'}</p>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <p className="text-center text-white/60 py-4">No team members available</p>
+              )}
             </div>
             <button
               onClick={() => {

@@ -15,6 +15,7 @@ import {
   Eye,
   Trash2,
   MoreVertical,
+  Edit,
 } from "lucide-react";
 
 // Status configuration
@@ -83,6 +84,7 @@ export function IssueCard({
   onView,
   onUpvote,
   onDelete,
+  onUpdate,
   showActions = false,
   className,
 }) {
@@ -187,7 +189,7 @@ export function IssueCard({
               <h3 className="font-semibold text-white line-clamp-1">
                 {issue.title}
               </h3>
-              <p className="text-xs text-white/40">#{issue.id}</p>
+              <p className="text-xs text-white/40">#{issue._id || issue.id}</p>
             </div>
           </div>
           <div
@@ -224,13 +226,13 @@ export function IssueCard({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onUpvote?.(issue.id);
+                onUpvote?.(issue._id || issue.id);
               }}
               className="flex items-center gap-1 text-sm text-white/60 transition-colors hover:text-rose-400"
               title="Upvote this issue"
             >
               <ThumbsUp className="h-4 w-4" />
-              <span>{issue.upvotes || 0}</span>
+              <span>{issue.upvoteCount || issue.upvotes?.length || 0}</span>
             </button>
             <span className="flex items-center gap-1 text-sm text-white/60">
               <MessageCircle className="h-4 w-4" />
@@ -247,39 +249,38 @@ export function IssueCard({
               <ChevronRight className="h-4 w-4" />
             </button>
             
-            {showActions && onDelete && (
-              <div className="relative">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMenu(!showMenu);
-                  }}
-                  className="rounded-lg p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-                  title="More actions"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </button>
-                
-                {showMenu && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-10" 
-                      onClick={() => setShowMenu(false)}
-                    />
-                    <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-lg border border-white/10 bg-black/95 shadow-xl backdrop-blur-xl">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowMenu(false);
-                          onDelete?.(issue.id);
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-rose-400 transition-colors hover:bg-rose-500/20"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete Issue
-                      </button>
+            {showActions && (onDelete || onUpdate) && (
+              <div className="flex items-center gap-1">
+                {onUpdate && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdate(issue);
+                    }}
+                    className="group relative rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-400 transition-all hover:border-amber-500/50 hover:bg-amber-500/20 hover:shadow-lg hover:shadow-amber-500/20"
+                    title="Edit issue"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Edit className="h-3.5 w-3.5" />
+                      <span className="font-medium">Edit</span>
                     </div>
-                  </>
+                  </button>
+                )}
+                
+                {onDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(issue._id || issue.id);
+                    }}
+                    className="group relative rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-sm text-rose-400 transition-all hover:border-rose-500/50 hover:bg-rose-500/20 hover:shadow-lg hover:shadow-rose-500/20"
+                    title="Delete issue"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span className="font-medium">Delete</span>
+                    </div>
+                  </button>
                 )}
               </div>
             )}
