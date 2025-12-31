@@ -7,6 +7,7 @@ import {
   logout,
   googleAuth,
   checkAuth,
+  setDistrict,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -21,5 +22,6 @@ router.post("/logout", logout);
 
 // Protected routes
 router.get("/me", protect, getCurrentUser);
+router.post("/set-district", protect, setDistrict);
 
 export default router;

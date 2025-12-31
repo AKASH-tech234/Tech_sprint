@@ -1,6 +1,8 @@
 // src/components/ProtectedRoute.jsx
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { DistrictSetup } from "./Dashboard/Shared/DistrictSetup";
+import { useState } from "react";
 
 // DEV MODE: Set to true to bypass auth check during development
 const DEV_BYPASS_AUTH = false;
@@ -15,7 +17,8 @@ const DEV_MOCK_USER = {
 };
 
 export function ProtectedRoute({ children, allowedRoles }) {
-  const { user, loading } = useAuth();
+  const { user, loading, setDistrict } = useAuth();
+  const [districtSetupComplete, setDistrictSetupComplete] = useState(false);
 
   // DEV MODE: Bypass authentication
   if (DEV_BYPASS_AUTH) {
@@ -44,5 +47,23 @@ export function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  return children;
+  // Check if official or community user needs to set district
+  const needsDistrictSetup =
+    (user.role === "official" || user.role === "community") &&
+    (!user.district || !user.district.isSet) &&
+    !districtSetupComplete;
+
+  const handleDistrictSet = async ({ state, district }) => {
+    await setDistrict(state, district);
+    setDistrictSetupComplete(true);
+  };
+
+  return (
+    <>
+      {needsDistrictSetup && (
+        <DistrictSetup onDistrictSet={handleDistrictSet} userRole={user.role} />
+      )}
+      {children}
+    </>
+  );
 }

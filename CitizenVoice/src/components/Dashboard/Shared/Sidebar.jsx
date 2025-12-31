@@ -18,6 +18,7 @@ import {
   TrendingUp,
   X,
   MessageSquare,
+  Users2,
 } from "lucide-react";
 
 // Menu configurations by role
@@ -36,6 +37,11 @@ const menuConfig = {
     },
     { icon: Map, label: "Community Map", path: "/dashboard/citizen/map" },
     {
+      icon: Users2,
+      label: "Join Communities",
+      path: "/dashboard/citizen/communities",
+    },
+    {
       icon: Bell,
       label: "Notifications",
       path: "/dashboard/citizen/notifications",
@@ -49,7 +55,12 @@ const menuConfig = {
       label: "Assigned Issues",
       path: "/dashboard/official/assigned",
     },
-    { icon: Users, label: "Team Management", path: "/dashboard/official/team", adminOnly: true },
+    {
+      icon: Users,
+      label: "Team Management",
+      path: "/dashboard/official/team",
+      adminOnly: true,
+    },
     {
       icon: MessageSquare,
       label: "Messages",
@@ -72,6 +83,11 @@ const menuConfig = {
       path: "/dashboard/community/verify",
     },
     {
+      icon: MessageSquare,
+      label: "Community Chat",
+      path: "/dashboard/community/chat",
+    },
+    {
       icon: TrendingUp,
       label: "Community Stats",
       path: "/dashboard/community/stats",
@@ -91,7 +107,7 @@ export function Sidebar({ isOpen, onClose, role = "citizen" }) {
   const isOfficialAdmin = !!user?.isOfficialAdmin;
   const menuItemsRaw = menuConfig[role] || menuConfig.citizen;
   const menuItems =
-    role === 'official' && !isOfficialAdmin
+    role === "official" && !isOfficialAdmin
       ? menuItemsRaw.filter((item) => !item.adminOnly)
       : menuItemsRaw;
 
@@ -144,7 +160,10 @@ export function Sidebar({ isOpen, onClose, role = "citizen" }) {
                 />
               </svg>
             </div>
-            <span className="text-sm font-bold tracking-widest text-white uppercase" style={{ letterSpacing: "0.1em" }}>
+            <span
+              className="text-sm font-bold tracking-widest text-white uppercase"
+              style={{ letterSpacing: "0.1em" }}
+            >
               CITIZEN VOICE
             </span>
           </div>

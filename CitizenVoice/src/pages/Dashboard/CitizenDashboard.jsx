@@ -10,6 +10,7 @@ import { ReportIssue } from "../../components/Dashboard/Citizen/reportissue";
 import { IssueMap } from "../../components/Dashboard/Citizen/IssueMap";
 import { NearbyIssuesMap } from "../../components/Dashboard/Shared/NearbyIssuesMap";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
+import { JoinCommunity } from "../../components/Dashboard/Citizen/JoinCommunity";
 import { issueService } from "../../services/issueService";
 import {
   FileText,
@@ -97,27 +98,27 @@ function DashboardHome() {
   React.useEffect(() => {
     const handleIssueCreated = () => {
       console.log("📢 Dashboard: Issue created event received");
-      setRefreshKey(prev => prev + 1);
+      setRefreshKey((prev) => prev + 1);
     };
 
     const handleIssueUpdated = () => {
       console.log("📢 Dashboard: Issue updated event received");
-      setRefreshKey(prev => prev + 1);
+      setRefreshKey((prev) => prev + 1);
     };
 
     const handleIssueDeleted = () => {
       console.log("📢 Dashboard: Issue deleted event received");
-      setRefreshKey(prev => prev + 1);
+      setRefreshKey((prev) => prev + 1);
     };
 
-    window.addEventListener('issueCreated', handleIssueCreated);
-    window.addEventListener('issueUpdated', handleIssueUpdated);
-    window.addEventListener('issueDeleted', handleIssueDeleted);
+    window.addEventListener("issueCreated", handleIssueCreated);
+    window.addEventListener("issueUpdated", handleIssueUpdated);
+    window.addEventListener("issueDeleted", handleIssueDeleted);
 
     return () => {
-      window.removeEventListener('issueCreated', handleIssueCreated);
-      window.removeEventListener('issueUpdated', handleIssueUpdated);
-      window.removeEventListener('issueDeleted', handleIssueDeleted);
+      window.removeEventListener("issueCreated", handleIssueCreated);
+      window.removeEventListener("issueUpdated", handleIssueUpdated);
+      window.removeEventListener("issueDeleted", handleIssueDeleted);
     };
   }, []);
 
@@ -125,13 +126,13 @@ function DashboardHome() {
     try {
       // Fetch ALL recent issues from backend API (from all users)
       const response = await issueService.getIssues({ limit: 6 });
-      
+
       if (response.data && response.data.issues) {
         // Sort by date and take first 6
         const sortedIssues = response.data.issues
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .slice(0, 6);
-        
+
         setRecentIssues(sortedIssues);
       }
     } catch (err) {
@@ -145,20 +146,26 @@ function DashboardHome() {
     try {
       // Fetch ALL issues to calculate community stats
       const allIssuesResponse = await issueService.getIssues({});
-      
+
       if (allIssuesResponse.data && allIssuesResponse.data.issues) {
         const allIssues = allIssuesResponse.data.issues;
-        const activeIssues = allIssues.filter(i => 
-          ['reported', 'acknowledged', 'in-progress'].includes(i.status)
+        const activeIssues = allIssues.filter((i) =>
+          ["reported", "acknowledged", "in-progress"].includes(i.status)
         ).length;
-        
-        const resolvedIssues = allIssues.filter(i => i.status === 'resolved').length;
-        const resolutionRate = allIssues.length > 0 
-          ? Math.round((resolvedIssues / allIssues.length) * 100) 
-          : 0;
-        
-        const totalUpvotes = allIssues.reduce((sum, i) => sum + (i.upvotes?.length || 0), 0);
-        
+
+        const resolvedIssues = allIssues.filter(
+          (i) => i.status === "resolved"
+        ).length;
+        const resolutionRate =
+          allIssues.length > 0
+            ? Math.round((resolvedIssues / allIssues.length) * 100)
+            : 0;
+
+        const totalUpvotes = allIssues.reduce(
+          (sum, i) => sum + (i.upvotes?.length || 0),
+          0
+        );
+
         setStats({
           totalIssues: allIssues.length,
           activeIssues: activeIssues,
@@ -186,19 +193,23 @@ function DashboardHome() {
     try {
       // Call backend API to upvote
       const response = await issueService.upvoteIssue(issueId);
-      
+
       // Update the recent issues list with new upvote count
       setRecentIssues((prev) =>
         prev.map((issue) =>
           issue._id === issueId
-            ? { ...issue, upvotes: Array.isArray(issue.upvotes) ? [...issue.upvotes] : [], upvoteCount: response.data.upvotes }
+            ? {
+                ...issue,
+                upvotes: Array.isArray(issue.upvotes) ? [...issue.upvotes] : [],
+                upvoteCount: response.data.upvotes,
+              }
             : issue
         )
       );
-      
+
       // Refresh stats to update total upvotes
       updateStats();
-      
+
       console.log("✅ Issue upvoted:", issueId);
     } catch (err) {
       console.error("Failed to upvote:", err);
@@ -207,10 +218,10 @@ function DashboardHome() {
 
   const handleIssueCreated = (newIssue) => {
     console.log("✅ New issue created:", newIssue.id);
-    
+
     // Trigger refresh by updating key
-    setRefreshKey(prev => prev + 1);
-    
+    setRefreshKey((prev) => prev + 1);
+
     // Show success notification (optional - you can add a toast here)
     console.log("Dashboard refreshed with new issue");
   };
@@ -273,7 +284,9 @@ function DashboardHome() {
       {/* Recent Issues */}
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">Community Recent Issues</h2>
+          <h2 className="text-xl font-semibold text-white">
+            Community Recent Issues
+          </h2>
           <button
             onClick={() => navigate("/dashboard/citizen/issues")}
             className="flex items-center gap-1 text-sm text-rose-400 transition-colors hover:text-rose-300"
@@ -284,7 +297,12 @@ function DashboardHome() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {recentIssues.map((issue) => (
-            <IssueCard key={issue._id || issue.id} issue={issue} onView={handleViewIssue} onUpvote={handleUpvote} />
+            <IssueCard
+              key={issue._id || issue.id}
+              issue={issue}
+              onView={handleViewIssue}
+              onUpvote={handleUpvote}
+            />
           ))}
         </div>
       </div>
@@ -326,6 +344,7 @@ export default function CitizenDashboard() {
         <Route path="report" element={<ReportIssuePage />} />
         <Route path="map" element={<MapPage />} />
         <Route path="heatmap" element={<HeatmapPage />} />
+        <Route path="communities" element={<JoinCommunity />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
@@ -372,9 +391,9 @@ function HeatmapPage() {
           </p>
         </div>
       </div>
-      <HeatmapViewer 
-        userRole="citizen" 
-        defaultCenter={[28.6139, 77.2090]}
+      <HeatmapViewer
+        userRole="citizen"
+        defaultCenter={[28.6139, 77.209]}
         defaultZoom={12}
         height="calc(100vh - 250px)"
       />
@@ -461,7 +480,9 @@ function NotificationsPage() {
      * Returns: { success: true }
      */
     setNotifications((prev) =>
-      prev.map((notif) => (notif.id === id ? { ...notif, unread: false } : notif))
+      prev.map((notif) =>
+        notif.id === id ? { ...notif, unread: false } : notif
+      )
     );
   };
 
@@ -491,7 +512,11 @@ function NotificationsPage() {
             Notifications
           </h1>
           <p className="text-sm text-white/60">
-            {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up!'}
+            {unreadCount > 0
+              ? `${unreadCount} unread notification${
+                  unreadCount > 1 ? "s" : ""
+                }`
+              : "All caught up!"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -612,7 +637,9 @@ function ProfilePage() {
     email: user?.email || "john@example.com",
     phone: user?.phone || "+1 (555) 123-4567",
     address: user?.address || "123 Main Street, Anytown, USA",
-    bio: user?.bio || "Active community member dedicated to improving local infrastructure.",
+    bio:
+      user?.bio ||
+      "Active community member dedicated to improving local infrastructure.",
   });
 
   const handleSave = () => {
