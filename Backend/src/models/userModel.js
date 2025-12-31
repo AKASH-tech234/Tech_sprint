@@ -34,6 +34,40 @@ const userSchema = new mongoose.Schema(
       default: "citizen",
       required: true,
     },
+    // District/Jurisdiction - Required for officials and community members
+    district: {
+      name: {
+        type: String,
+        default: null,
+      },
+      state: {
+        type: String,
+        default: null,
+      },
+      // Flag to indicate if district has been set (for first-time setup)
+      isSet: {
+        type: Boolean,
+        default: false,
+      },
+      // When the district was set
+      setAt: {
+        type: Date,
+        default: null,
+      },
+    },
+    // Community membership for citizens
+    joinedCommunities: [
+      {
+        communityId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Community",
+        },
+        joinedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     // Google OAuth fields (optional)
     googleId: {
       type: String,
@@ -62,7 +96,7 @@ const userSchema = new mongoose.Schema(
       municipalityId: String,
       addedBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: "User",
         default: null,
       },
     },
@@ -87,5 +121,7 @@ const userSchema = new mongoose.Schema(
 
 // Index for role queries (email and username already indexed via unique: true)
 userSchema.index({ role: 1 });
+// Index for district queries
+userSchema.index({ "district.state": 1, "district.name": 1 });
 
 export const User = mongoose.model("User", userSchema);

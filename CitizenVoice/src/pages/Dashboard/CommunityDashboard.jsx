@@ -6,6 +6,7 @@ import { StatsCard } from "../../components/Dashboard/Shared/StatsCard";
 import { AreaIssues } from "../../components/Dashboard/Community/areaissue";
 import { VerificationPanel } from "../../components/Dashboard/Community/verificationpanel";
 import { CommunityStats } from "../../components/Dashboard/Community/communitystats";
+import { CommunityChat } from "../../components/Dashboard/Community/CommunityChat";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import {
   FileText,
@@ -315,9 +316,9 @@ function MapPage() {
           </p>
         </div>
       </div>
-      <HeatmapViewer 
-        userRole="community" 
-        defaultCenter={[28.6139, 77.2090]}
+      <HeatmapViewer
+        userRole="community"
+        defaultCenter={[28.6139, 77.209]}
         defaultZoom={12}
         height="calc(100vh - 250px)"
       />
@@ -413,6 +414,7 @@ export default function CommunityDashboard() {
         <Route index element={<DashboardHome />} />
         <Route path="area" element={<AreaIssues />} />
         <Route path="verify" element={<VerificationPanel />} />
+        <Route path="chat" element={<CommunityChat />} />
         <Route path="stats" element={<CommunityStats />} />
         <Route path="map" element={<MapPage />} />
         <Route path="heatmap" element={<MapPage />} />

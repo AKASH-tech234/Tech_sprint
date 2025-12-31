@@ -36,11 +36,9 @@ api.interceptors.response.use(
     console.log(`📥 [API Response] ${response.status}`, response.data);
     return response;
   },
-   (error) => {
+  (error) => {
     const message =
-      error.response?.data?.message ||
-      error.message ||
-      "Something went wrong";
+      error.response?.data?.message || error.message || "Something went wrong";
 
     const err = new Error(message);
     err.status = error.response?.status;
@@ -115,6 +113,14 @@ class AuthService {
     } catch (error) {
       console.error("❌ [AuthService] Logout error:", error);
     }
+  }
+
+  // Set user's district (for officials and community users)
+  async setDistrict(state, district) {
+    console.log("📍 [AuthService] Setting district:", { state, district });
+    const { data } = await api.post("/set-district", { state, district });
+    console.log("✅ [AuthService] District set successfully:", data.data);
+    return data.data;
   }
 }
 

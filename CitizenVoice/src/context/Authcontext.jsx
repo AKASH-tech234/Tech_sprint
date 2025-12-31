@@ -117,6 +117,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Set district for official/community users
+  const setDistrict = async (state, district) => {
+    console.log("📍 [AuthContext] Setting district:", { state, district });
+    try {
+      setError(null);
+      const data = await authService.setDistrict(state, district);
+      // Update user with new district info
+      setUser((prevUser) => ({
+        ...prevUser,
+        district: {
+          name: district,
+          state: state,
+          isSet: true,
+          setAt: new Date().toISOString(),
+        },
+      }));
+      console.log("✅ [AuthContext] District set successfully");
+      return { success: true, data };
+    } catch (err) {
+      console.error("❌ [AuthContext] Set district error:", err.message);
+      setError(err.message || "Failed to set district");
+      throw err;
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -126,6 +151,7 @@ export const AuthProvider = ({ children }) => {
     googleAuth,
     logout,
     refreshUser,
+    setDistrict,
     isAuthenticated: !!user,
   };
 

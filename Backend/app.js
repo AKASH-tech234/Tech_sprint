@@ -1,4 +1,4 @@
-// //when using google authentication make sure to put client ID in frontend and backend 
+// //when using google authentication make sure to put client ID in frontend and backend
 // import express from "express";
 // import cors from "cors";
 // import mongoose from "mongoose";
@@ -13,10 +13,8 @@
 // import authRoutes from "./src/routes/authRoutes.js";
 // import officialRoutes from "./src/routes/officialRoutes.js";
 
-
 // import http from "http";
 // import { Server } from "socket.io";
-
 
 // // Load environment variables FIRST
 // dotenv.config();
@@ -44,8 +42,6 @@
 //     credentials: true,
 //   },
 // });
-
-
 
 // // -------------------- Middleware --------------------
 // app.use(
@@ -86,31 +82,31 @@
 // app.use((err, req, res, next) => {
 //   if (err instanceof multer.MulterError) {
 //     if (err.code === 'LIMIT_FILE_SIZE') {
-//       return res.status(400).json({ 
-//         success: false, 
-//         message: 'File too large. Maximum size is 5MB.' 
+//       return res.status(400).json({
+//         success: false,
+//         message: 'File too large. Maximum size is 5MB.'
 //       });
 //     }
 //     if (err.code === 'LIMIT_FILE_COUNT') {
-//       return res.status(400).json({ 
-//         success: false, 
-//         message: 'Too many files. Maximum is 5 files.' 
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Too many files. Maximum is 5 files.'
 //       });
 //     }
-//     return res.status(400).json({ 
-//       success: false, 
-//       message: err.message 
+//     return res.status(400).json({
+//       success: false,
+//       message: err.message
 //     });
 //   }
-  
+
 //   // Custom error handling
 //   if (err.message && err.message.includes('Invalid file type')) {
-//     return res.status(400).json({ 
-//       success: false, 
-//       message: err.message 
+//     return res.status(400).json({
+//       success: false,
+//       message: err.message
 //     });
 //   }
-  
+
 //   // General error handling
 //   console.error('❌ Error:', err);
 //   res.status(err.statusCode || 500).json({
@@ -147,7 +143,6 @@
 //   // Don't exit the process, just log the error
 // });
 
-
 // io.on("connection", (socket) => {
 //   console.log("🟢 Socket connected:", socket.id);
 
@@ -171,21 +166,7 @@
 //   });
 // });
 
-
 // start();
- 
-
-
-
-
-
-
-
-
-
-
-
-
 
 // // // when using google authentication make sure to put client ID in frontend and backend
 
@@ -346,38 +327,7 @@
 
 // // start();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// when using google authentication make sure to put client ID in frontend and backend 
+// when using google authentication make sure to put client ID in frontend and backend
 
 import express from "express";
 import cors from "cors";
@@ -395,10 +345,9 @@ import issueRoutes from "./src/routes/issueRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import officialRoutes from "./src/routes/officialRoutes.js";
 import messageRoutes from "./src/routes/messageRoutes.js";
+import communityRoutes from "./src/routes/communityRoutes.js";
 
 import Message from "./src/models/message.js";
-
-
 
 // Load environment variables FIRST
 dotenv.config();
@@ -439,7 +388,7 @@ io.on("connection", (socket) => {
     socket.join(userId);
     onlineUsers.set(userId, socket.id);
     console.log(`👤 User ${userId} joined room`);
-    
+
     // Broadcast user online status
     io.emit("userOnline", userId);
   });
@@ -463,7 +412,7 @@ io.on("connection", (socket) => {
 
       // Send to receiver
       io.to(receiverId).emit("receiveMessage", messageData);
-      
+
       // Also send back to sender for confirmation
       io.to(senderId).emit("messageSent", messageData);
     } catch (error) {
@@ -517,7 +466,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/issues", issueRoutes);
 app.use("/api/officials", officialRoutes);
 app.use("/api/messages", messageRoutes);
-
+app.use("/api/communities", communityRoutes);
 
 app.get("/", (req, res) => {
   res.send("CitizenVoice Backend is running 🚀");

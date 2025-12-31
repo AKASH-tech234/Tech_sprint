@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import { User } from "../models/userModel.js";
+import Community from "../models/Community.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
@@ -52,7 +53,9 @@ const sendAuthResponse = (res, statusCode, user, message) => {
     email: user.email,
     role: user.role,
     avatar: user.avatar || null,
-    officialDetails: user.role === 'official' ? (user.officialDetails || {}) : undefined,
+    district: user.district || null,
+    officialDetails:
+      user.role === "official" ? user.officialDetails || {} : undefined,
     isOfficialAdmin: isOfficialAdmin(user),
     createdAt: user.createdAt,
   };
@@ -142,7 +145,9 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   // Check if user exists
-  const user = await User.findOne({ email }).select("+password").populate('officialDetails.addedBy', 'username email');
+  const user = await User.findOne({ email })
+    .select("+password")
+    .populate("officialDetails.addedBy", "username email");
 
   if (!user) {
     console.log("❌ [Backend] User not found:", email);
@@ -152,14 +157,20 @@ export const login = asyncHandler(async (req, res) => {
   console.log("👤 [Backend] User found:", user._id);
 
   // Additional check for team members: only allow login if added by a team leader
-  if (user.role === 'official' && user.officialDetails?.addedBy) {
+  if (user.role === "official" && user.officialDetails?.addedBy) {
     // This is a team member - verify their team leader still exists
     const teamLeader = user.officialDetails.addedBy;
     if (!teamLeader) {
       console.log("❌ [Backend] Team member's leader not found:", email);
-      throw new ApiError(403, "Your account has been deactivated. Contact your team leader.");
+      throw new ApiError(
+        403,
+        "Your account has been deactivated. Contact your team leader."
+      );
     }
-    console.log("✅ [Backend] Team member verified, added by:", teamLeader.username);
+    console.log(
+      "✅ [Backend] Team member verified, added by:",
+      teamLeader.username
+    );
   }
 
   // Check password
@@ -192,7 +203,9 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     email: user.email,
     role: user.role,
     avatar: user.avatar || null,
-    officialDetails: user.role === 'official' ? (user.officialDetails || {}) : undefined,
+    district: user.district || null,
+    officialDetails:
+      user.role === "official" ? user.officialDetails || {} : undefined,
     isOfficialAdmin: isOfficialAdmin(user),
     createdAt: user.createdAt,
   };
@@ -345,7 +358,9 @@ export const checkAuth = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       avatar: user.avatar || null,
-      officialDetails: user.role === 'official' ? (user.officialDetails || {}) : undefined,
+      district: user.district || null,
+      officialDetails:
+        user.role === "official" ? user.officialDetails || {} : undefined,
       isOfficialAdmin: isOfficialAdmin(user),
       createdAt: user.createdAt,
     };
@@ -364,4 +379,96 @@ export const checkAuth = asyncHandler(async (req, res) => {
       new ApiResponse(200, { authenticated: false }, "Not authenticated")
     );
   }
+});
+
+// @desc    Set district for official/community user
+// @route   POST /api/auth/set-district
+// @access  Private
+export const setDistrict = asyncHandler(async (req, res) => {
+  console.log("📍 [Backend] Set district request received");
+  const { state, district } = req.body;
+  const userId = req.user.id;
+
+  // Validation
+  if (!state || !district) {
+    console.log("❌ [Backend] Missing state or district");
+    throw new ApiError(400, "State and district are required");
+  }
+
+  // Get user
+  const user = await User.findById(userId);
+  if (!user) {
+    console.log("❌ [Backend] User not found:", userId);
+    throw new ApiError(404, "User not found");
+  }
+
+  // Check if user is official or community
+  if (user.role !== "official" && user.role !== "community") {
+    console.log("❌ [Backend] Invalid role for district setting:", user.role);
+    throw new ApiError(
+      403,
+      "Only officials and community users can set district"
+    );
+  }
+
+  // Check if district is already set (one-time setting)
+  if (user.district && user.district.isSet) {
+    console.log("❌ [Backend] District already set for user:", userId);
+    throw new ApiError(400, "District is already set and cannot be changed");
+  }
+
+  // Update user's district
+  user.district = {
+    name: district,
+    state: state,
+    isSet: true,
+    setAt: new Date(),
+  };
+
+  await user.save();
+  console.log("✅ [Backend] District set for user:", userId, {
+    state,
+    district,
+  });
+
+  // For community role, also set as leader of the community
+  if (user.role === "community") {
+    try {
+      const community = await Community.findOrCreateForDistrict(
+        state,
+        district
+      );
+
+      // Set user as leader if no leader exists
+      if (!community.leader) {
+        community.leader = user._id;
+      }
+
+      // Add user as member with leader role
+      await community.addMember(user._id, "leader");
+
+      console.log(
+        "✅ [Backend] User set as community leader:",
+        community.districtCode
+      );
+    } catch (err) {
+      console.error("⚠️ [Backend] Error setting up community:", err.message);
+      // Don't throw - district is still set successfully
+    }
+  }
+
+  const userData = {
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    avatar: user.avatar || null,
+    district: user.district,
+    officialDetails:
+      user.role === "official" ? user.officialDetails || {} : undefined,
+    isOfficialAdmin: isOfficialAdmin(user),
+    createdAt: user.createdAt,
+  };
+
+  res.json(new ApiResponse(200, userData, "District set successfully"));
 });
