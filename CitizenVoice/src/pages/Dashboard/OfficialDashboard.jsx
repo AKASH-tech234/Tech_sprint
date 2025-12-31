@@ -4,11 +4,14 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "../../components/Dashboard/Shared/DashboardLayout";
 import { StatsCard } from "../../components/Dashboard/Shared/StatsCard";
 import { IssueManagement } from "../../components/Dashboard/Official/issuemanagment";
+import { IssueDetailPage } from "../../components/Dashboard/Official/IssueDetailPage";
 import { TeamManagement } from "../../components/Dashboard/Official/Teammanagement";
 import { TeamChat } from "../../components/Dashboard/Official/TeamChat";
 import { Analytics } from "../../components/Dashboard/Official/Analytics";
+import { ReviewQueue } from "../../components/Dashboard/Official/ReviewQueue";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import { issueService } from "../../services/issueService";
+import { useAuth } from "../../context/Authcontext";
 import {
   Inbox,
   Users,
@@ -57,6 +60,8 @@ const mockStats = {
 // Dashboard Home Component
 function DashboardHome() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isOfficialAdmin = !!user?.isOfficialAdmin;
   const [priorityFilter, setPriorityFilter] = useState("high");
   const [stats, setStats] = useState(mockStats);
   const [loading, setLoading] = useState(true);
@@ -65,8 +70,13 @@ function DashboardHome() {
 
   useEffect(() => {
     loadStats();
-    loadTeamMembers();
-  }, []);
+    // Only load team members if user is an admin
+    if (isOfficialAdmin) {
+      loadTeamMembers();
+    } else {
+      setTeamLoading(false);
+    }
+  }, [isOfficialAdmin]);
 
   const loadTeamMembers = async () => {
     try {
@@ -286,64 +296,66 @@ function DashboardHome() {
           </div>
         </div>
 
-        {/* Team Status */}
-        <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
-              <Users className="h-5 w-5 text-violet-400" />
-              Team Status
-            </h3>
-            <button
-              onClick={() => navigate("/dashboard/official/team")}
-              className="flex items-center gap-1 text-sm text-rose-400 hover:text-rose-300"
-            >
-              View all
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="space-y-3">
-            {teamLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
-              </div>
-            ) : teamMembers.length === 0 ? (
-              <div className="text-center py-4 text-white/40 text-sm">
-                No team members yet
-              </div>
-            ) : (
-              teamMembers.slice(0, 4).map((member) => (
-                <div
-                  key={member._id || member.id}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-xs font-medium text-white">
-                        {(member.name || member.username || "??")
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </div>
-                      <span
-                        className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0a0a0a] ${
-                          member.status === "active"
-                            ? "bg-emerald-500"
-                            : member.status === "busy" || (member.stats?.assigned > 10)
-                            ? "bg-amber-500"
-                            : "bg-gray-500"
-                        }`}
-                      />
-                    </div>
-                    <span className="text-sm text-white">{member.name || member.username}</span>
-                  </div>
-                  <span className="text-sm text-white/40">
-                    {member.stats?.assigned || 0} tasks
-                  </span>
+        {/* Team Status - Only show for admin users */}
+        {isOfficialAdmin && (
+          <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
+                <Users className="h-5 w-5 text-violet-400" />
+                Team Status
+              </h3>
+              <button
+                onClick={() => navigate("/dashboard/official/team")}
+                className="flex items-center gap-1 text-sm text-rose-400 hover:text-rose-300"
+              >
+                View all
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {teamLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
                 </div>
-              ))
-            )}
+              ) : teamMembers.length === 0 ? (
+                <div className="text-center py-4 text-white/40 text-sm">
+                  No team members yet
+                </div>
+              ) : (
+                teamMembers.slice(0, 4).map((member) => (
+                  <div
+                    key={member._id || member.id}
+                    className="flex items-center justify-between rounded-lg bg-white/5 p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500 text-xs font-medium text-white">
+                          {(member.name || member.username || "??")
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </div>
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0a0a0a] ${
+                            member.status === "active"
+                              ? "bg-emerald-500"
+                              : member.status === "busy" || (member.stats?.assigned > 10)
+                              ? "bg-amber-500"
+                              : "bg-gray-500"
+                          }`}
+                        />
+                      </div>
+                      <span className="text-sm text-white">{member.name || member.username}</span>
+                    </div>
+                    <span className="text-sm text-white/40">
+                      {member.stats?.assigned || 0} tasks
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Quick Actions */}
@@ -486,6 +498,8 @@ export default function OfficialDashboard() {
       <Routes>
         <Route index element={<DashboardHome />} />
         <Route path="assigned" element={<IssueManagement />} />
+        <Route path="issue/:issueId" element={<IssueDetailPage />} />
+        <Route path="review-queue" element={<ReviewQueue />} />
         <Route path="team" element={<TeamManagement />} />
         <Route path="chat" element={<TeamChat />} />
         <Route path="chat/:memberId" element={<TeamChat />} />

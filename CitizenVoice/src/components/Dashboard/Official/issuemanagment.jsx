@@ -1,5 +1,6 @@
 // src/components/Dashboard/Official/IssueManagement.jsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "../../../lib/utils";
 import {
   Search,
@@ -14,6 +15,7 @@ import {
   ChevronDown,
   ArrowUpRight,
   Loader2,
+  Eye,
 } from "lucide-react";
 import { issueService } from "../../../services/issueService";
 import { useAuth } from "../../../context/AuthContext";
@@ -51,6 +53,7 @@ const priorityConfig = {
 
 export function IssueManagement({ viewMode = "table" }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isOfficialAdmin = !!user?.isOfficialAdmin;
 
   const [issues, setIssues] = useState([]);
@@ -239,35 +242,105 @@ export function IssueManagement({ viewMode = "table" }) {
               className="h-10 w-48 rounded-lg border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white placeholder-white/40 outline-none focus:border-rose-500/50"
             />
           </div>
-          <div className="flex overflow-hidden rounded-lg border border-white/10">
-            <button
-              onClick={() => setView("kanban")}
-              className={cn(
-                "px-3 py-2 text-sm transition-colors",
-                view === "kanban"
-                  ? "bg-white/10 text-white"
-                  : "text-white/40 hover:text-white"
-              )}
-            >
-              Kanban
-            </button>
-            <button
-              onClick={() => setView("table")}
-              className={cn(
-                "px-3 py-2 text-sm transition-colors",
-                view === "table"
-                  ? "bg-white/10 text-white"
-                  : "text-white/40 hover:text-white"
-              )}
-            >
-              Table
-            </button>
-          </div>
+          {isOfficialAdmin && (
+            <div className="flex overflow-hidden rounded-lg border border-white/10">
+              <button
+                onClick={() => setView("kanban")}
+                className={cn(
+                  "px-3 py-2 text-sm transition-colors",
+                  view === "kanban"
+                    ? "bg-white/10 text-white"
+                    : "text-white/40 hover:text-white"
+                )}
+              >
+                Kanban
+              </button>
+              <button
+                onClick={() => setView("table")}
+                className={cn(
+                  "px-3 py-2 text-sm transition-colors",
+                  view === "table"
+                    ? "bg-white/10 text-white"
+                    : "text-white/40 hover:text-white"
+                )}
+              >
+                Table
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Non-admin officials: Assigned issues cards only */}
+      {!isOfficialAdmin && (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredIssues.map((issue) => (
+              <div
+                key={issue._id}
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all hover:border-rose-500/30 hover:bg-white/10"
+              >
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-rose-500/10 to-violet-500/10 opacity-60" />
+                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-br from-rose-500/10 via-transparent to-violet-500/10" />
+
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", statusConfig[issue.status]?.color)}>
+                        {statusConfig[issue.status]?.label}
+                      </span>
+                    </div>
+                    <h4 className="truncate text-lg font-semibold text-white">{issue.title}</h4>
+                    <p className="mt-1 text-xs text-white/40">{issue._id}</p>
+                  </div>
+
+                  <span className={cn("rounded-full px-2 py-0.5 text-xs", priorityConfig[issue.priority]?.bg, priorityConfig[issue.priority]?.color)}>
+                    {priorityConfig[issue.priority]?.label || issue.priority}
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-sm text-white/70">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-white/40" />
+                    <span className="truncate">{issue.location?.address || "Unknown location"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-white/40" />
+                    <span>{formatDate(issue.createdAt)}</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 border-t border-white/10 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-white/40">Issue ID</span>
+                    <span className="text-sm font-semibold text-white">{issue.issueId}</span>
+                  </div>
+                </div>
+
+                {/* View Details Button */}
+                <button
+                  onClick={() => navigate(`/dashboard/official/issue/${issue._id}`)}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 px-4 py-2.5 text-sm font-medium text-white transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-rose-500/20"
+                >
+                  <Eye className="h-4 w-4" />
+                  View Details
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {filteredIssues.length === 0 && (
+            <div className="rounded-2xl border border-white/10 bg-white/5 py-16 text-center">
+              <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-white/30" />
+              <h3 className="mb-2 text-lg font-semibold text-white">No assigned issues</h3>
+              <p className="text-sm text-white/60">{searchQuery ? "Try a different search." : "You don't have any assigned issues yet."}</p>
+            </div>
+          )}
+        </>
+      )}
+
       {/* Kanban View */}
-      {view === "kanban" && (
+      {isOfficialAdmin && view === "kanban" && (
         <div className="flex gap-4 overflow-x-auto pb-4">
           {Object.entries(statusConfig).map(([status, config]) => (
             <div
@@ -379,7 +452,7 @@ export function IssueManagement({ viewMode = "table" }) {
       )}
 
       {/* Table View */}
-      {view === "table" && (
+      {isOfficialAdmin && view === "table" && (
         <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="w-full">
             <thead>

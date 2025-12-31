@@ -402,6 +402,97 @@ class IssueService {
 
     return response.json();
   }
+
+  // Submit verification or resolution report for an issue
+  async submitReport(issueId, formData) {
+    const response = await fetch(`${API_BASE_URL}/issues/${issueId}/reports`, {
+      method: "POST",
+      credentials: "include",
+      body: formData, // FormData sets its own Content-Type
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to submit report");
+    }
+
+    return response.json();
+  }
+
+  // === Admin Review Queue APIs ===
+
+  // Get pending reports for admin review (verification or resolution)
+  async getPendingReports(reportType = "verification") {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/reports/pending?type=${reportType}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch pending reports");
+    }
+
+    return response.json();
+  }
+
+  // Review a report (approve or reject)
+  async reviewReport(reportId, reviewData) {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/reports/${reportId}/review`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(reviewData),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to submit review");
+    }
+
+    return response.json();
+  }
+
+  // Get report details
+  async getReportDetails(reportId) {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/reports/${reportId}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch report details");
+    }
+
+    return response.json();
+  }
+
+  // Get reports for a specific issue
+  async getIssueReports(issueId) {
+    const response = await fetch(
+      `${API_BASE_URL}/issues/${issueId}/reports`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch issue reports");
+    }
+
+    return response.json();
+  }
 }
 
 export const issueService = new IssueService();

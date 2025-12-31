@@ -11,6 +11,7 @@ import {
   getIssue,
   updateIssue
 } from '../controllers/issueController.js';
+import { submitReport, getIssueReports } from '../controllers/reportController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { uploadIssueImages } from '../middleware/uploadMiddleware.js';
 
@@ -32,5 +33,9 @@ router.delete('/:issueId', deleteIssue);
 
 // Issue actions
 router.post('/:issueId/upvote', upvoteIssue);
+
+// Report submission and retrieval (for team members)
+router.post('/:issueId/reports', uploadIssueImages, submitReport);
+router.get('/:issueId/reports', getIssueReports);
 
 export default router;
