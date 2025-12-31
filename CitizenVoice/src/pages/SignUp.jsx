@@ -397,31 +397,7 @@ export function SignUp() {
             </p>
 
             {/* DEV MODE: Test buttons to access dashboards without auth */}
-            <div className="mt-6 p-4 border border-yellow-500/30 rounded-xl bg-yellow-500/10">
-              <p className="text-xs text-yellow-400 mb-3 text-center font-medium">
-                🚧 DEV MODE: Test Dashboard Access
-              </p>
-              <div className="flex flex-col gap-2">
-                <a
-                  href="/dashboard/citizen"
-                  className="w-full py-2 text-center rounded-lg bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 transition-colors text-sm font-medium"
-                >
-                  → Citizen Dashboard
-                </a>
-                <a
-                  href="/dashboard/official"
-                  className="w-full py-2 text-center rounded-lg bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 transition-colors text-sm font-medium"
-                >
-                  → Official Dashboard
-                </a>
-                <a
-                  href="/dashboard/community"
-                  className="w-full py-2 text-center rounded-lg bg-pink-500/20 text-pink-400 hover:bg-pink-500/30 transition-colors text-sm font-medium"
-                >
-                  → Community Dashboard
-                </a>
-              </div>
-            </div>
+            
           </div>
 
           <p className="mt-6 text-center text-sm text-white/40">
