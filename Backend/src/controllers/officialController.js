@@ -103,8 +103,9 @@ export const assignIssue = asyncHandler(async (req, res) => {
   }
 
   issue.assignedTo = member._id;
-  // Requirement: once assigned, issue should be in-progress
-  issue.status = 'in-progress';
+  // WORKFLOW: Assigning issue → status = 'acknowledged'
+  // Team member then submits verification report → admin approves → status = 'in-progress'
+  issue.status = 'acknowledged';
 
   await issue.save();
   await issue.populate('reportedBy', 'username email avatar');

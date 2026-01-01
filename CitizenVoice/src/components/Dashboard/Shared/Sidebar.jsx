@@ -18,6 +18,7 @@ import {
   TrendingUp,
   X,
   MessageSquare,
+  ClipboardCheck,
 } from "lucide-react";
 
 // Menu configurations by role
@@ -48,6 +49,12 @@ const menuConfig = {
       icon: Inbox,
       label: "Assigned Issues",
       path: "/dashboard/official/assigned",
+    },
+    {
+      icon: ClipboardCheck,
+      label: "Review Queue",
+      path: "/dashboard/official/review-queue",
+      adminOnly: true,
     },
     { icon: Users, label: "Team Management", path: "/dashboard/official/team", adminOnly: true },
     {

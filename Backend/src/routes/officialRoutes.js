@@ -18,6 +18,12 @@ import {
   requestResources,
   generateReport,
 } from '../controllers/officialController.js';
+import {
+  getPendingReports,
+  getReportDetails,
+  reviewReport,
+  getIssueReports
+} from '../controllers/reportController.js';
 
 const router = express.Router();
 
@@ -47,6 +53,12 @@ router.patch('/settings', updateSettings);
 
 // Analytics
 router.get('/analytics', getAnalytics);
+
+// Report review (admin only)
+router.get('/reports/pending', requireOfficialAdmin, getPendingReports);
+router.get('/reports/:reportId', requireOfficialAdmin, getReportDetails);
+router.post('/reports/:reportId/review', requireOfficialAdmin, reviewReport);
+router.get('/reports/history/:issueId', requireOfficialAdmin, getIssueReports);
 
 // Quick actions
 router.post('/quick-actions/work-order', requireOfficialAdmin, createWorkOrder);
