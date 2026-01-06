@@ -92,7 +92,7 @@ const reportSchema = new mongoose.Schema({
     type: String // URLs to uploaded images
   }],
   
-  // === REVIEW FIELDS ===
+  // == REVIEW FIELDS ==
   // Reviewed by (admin)
   reviewedBy: {
     type: mongoose.Schema.Types.ObjectId,

@@ -68,7 +68,7 @@ const sendAuthResponse = (res, statusCode, user, message) => {
     .json(new ApiResponse(statusCode, { user: userData }, message));
 };
 
-// @desc    Register new user
+// @desc   Register new user
 // @route   POST /api/auth/signup
 // @access  Public
 export const signup = asyncHandler(async (req, res) => {

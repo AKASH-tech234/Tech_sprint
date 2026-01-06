@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const communityVerificationSchema = new mongoose.Schema({
   issue: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Issue',
+     ref: 'Issue',
     required: true,
   },
   verifiedBy: {
