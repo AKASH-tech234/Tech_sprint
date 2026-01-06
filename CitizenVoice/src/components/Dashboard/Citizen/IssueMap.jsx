@@ -5,6 +5,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
+import { issueService } from "../../../services/issueService";
 import {
   MapPin,
   Layers,
@@ -257,65 +258,34 @@ export function IssueMap() {
     }
   }, []);
 
-  // Load issues (from localStorage + mock data)
+  // Load issues from API
   useEffect(() => {
-    /**
-     * BACKEND API CALL: Get All Issues with Location
-     * Endpoint: GET /api/issues/map?bounds={bounds}
-     * Returns: { success: true, issues: [...] }
-     */
+    const loadIssues = async () => {
+      try {
+        // Fetch issues from backend API
+        const response = await issueService.getIssues();
+        const apiIssues = response.data?.issues || response.issues || [];
+        
+        // Filter issues that have valid location data
+        const issuesWithLocation = apiIssues.filter(
+          (issue) => issue.location && issue.location.lat && issue.location.lng
+        );
+        
+        setIssues(issuesWithLocation);
+      } catch (err) {
+        console.error('Error loading issues for map:', err);
+        // Fallback to empty array on error
+        setIssues([]);
+      }
+    };
     
-    const userIssues = JSON.parse(localStorage.getItem("userIssues") || "[]");
+    loadIssues();
     
-    // Mock issues for demonstration
-    const mockIssues = [
-      {
-        id: "MOCK-001",
-        title: "Pothole on Main Street",
-        category: "pothole",
-        status: "reported",
-        location: { lat: 40.7128, lng: -74.006 },
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "MOCK-002",
-        title: "Broken Street Light",
-        category: "streetlight",
-        status: "in-progress",
-        location: { lat: 40.715, lng: -74.008 },
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "MOCK-003",
-        title: "Graffiti Removal Needed",
-        category: "graffiti",
-        status: "resolved",
-        location: { lat: 40.71, lng: -74.005 },
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "MOCK-004",
-        title: "Abandoned Vehicle",
-        category: "other",
-        status: "acknowledged",
-        location: { lat: 40.714, lng: -74.007 },
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "MOCK-005",
-        title: "Water Leak",
-        category: "water",
-        status: "reported",
-        location: { lat: 40.713, lng: -74.0065 },
-        createdAt: new Date().toISOString(),
-      },
-    ];
-
-    const allIssues = [...userIssues, ...mockIssues].filter(
-      (issue) => issue.location && issue.location.lat && issue.location.lng
-    );
-
-    setIssues(allIssues);
+    // Listen for new issue creation to refresh
+    const handleIssueCreated = () => loadIssues();
+    window.addEventListener('issueCreated', handleIssueCreated);
+    
+    return () => window.removeEventListener('issueCreated', handleIssueCreated);
   }, []);
 
   // Filter issues

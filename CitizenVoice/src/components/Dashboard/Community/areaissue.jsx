@@ -1,6 +1,7 @@
 // src/components/Dashboard/Community/AreaIssues.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "../../../lib/utils";
+import { issueService } from "../../../services/issueService";
 import {
   Search,
   Filter,
@@ -12,6 +13,8 @@ import {
   Grid3X3,
   List,
   Map as MapIcon,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 
 // Status configuration
@@ -39,101 +42,6 @@ const categoryIcons = {
   other: "📋",
 };
 
-// Mock area issues
-const mockAreaIssues = [
-  {
-    id: "ISS-101",
-    title: "Multiple potholes on Highway 7",
-    description:
-      "There are at least 5 potholes in a 100m stretch causing traffic slowdowns.",
-    category: "pothole",
-    priority: "high",
-    status: "in-progress",
-    location: { address: "Highway 7, near exit 23", neighborhood: "Northside" },
-    upvotes: 67,
-    comments: 12,
-    createdAt: "2024-12-15T10:30:00Z",
-    updatedAt: "2024-12-24T15:45:00Z",
-    image: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=400",
-    reporter: "Anonymous",
-    verifications: 5,
-  },
-  {
-    id: "ISS-102",
-    title: "Street lights out in residential area",
-    description:
-      "Entire block has been dark for a week. Safety concerns for residents.",
-    category: "streetlight",
-    priority: "high",
-    status: "acknowledged",
-    location: { address: "Maple Street Block 5-8", neighborhood: "Westend" },
-    upvotes: 45,
-    comments: 8,
-    createdAt: "2024-12-18T20:00:00Z",
-    updatedAt: "2024-12-22T09:15:00Z",
-    image: null,
-    reporter: "Community Watch",
-    verifications: 3,
-  },
-  {
-    id: "ISS-103",
-    title: "Illegal dumping at park entrance",
-    description:
-      "Construction debris has been dumped near Central Park main entrance.",
-    category: "garbage",
-    priority: "medium",
-    status: "reported",
-    location: {
-      address: "Central Park, Main Entrance",
-      neighborhood: "Downtown",
-    },
-    upvotes: 34,
-    comments: 5,
-    createdAt: "2024-12-23T14:00:00Z",
-    updatedAt: "2024-12-23T14:00:00Z",
-    image: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400",
-    reporter: "Jane D.",
-    verifications: 0,
-  },
-  {
-    id: "ISS-104",
-    title: "Drainage overflow after rain",
-    description:
-      "Storm drain near school overflows causing flooding on sidewalks.",
-    category: "water",
-    priority: "high",
-    status: "resolved",
-    location: {
-      address: "Lincoln Elementary School",
-      neighborhood: "Eastside",
-    },
-    upvotes: 89,
-    comments: 23,
-    createdAt: "2024-12-10T08:30:00Z",
-    updatedAt: "2024-12-20T16:00:00Z",
-    image: null,
-    reporter: "School Admin",
-    verifications: 12,
-  },
-  {
-    id: "ISS-105",
-    title: "Broken traffic signal",
-    description:
-      "Traffic light stuck on red for northbound traffic causing major delays.",
-    category: "traffic",
-    priority: "high",
-    status: "in-progress",
-    location: { address: "Oak & Main Intersection", neighborhood: "Downtown" },
-    upvotes: 156,
-    comments: 31,
-    createdAt: "2024-12-24T07:00:00Z",
-    updatedAt: "2024-12-25T10:00:00Z",
-    image: null,
-    reporter: "Multiple",
-    verifications: 8,
-  },
-];
-
 const neighborhoods = [
   { value: "all", label: "All Neighborhoods" },
   { value: "downtown", label: "Downtown" },
@@ -144,7 +52,8 @@ const neighborhoods = [
 ];
 
 export function AreaIssues({ onViewIssue }) {
-  const [issues] = useState(mockAreaIssues);
+  const [issues, setIssues] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
@@ -154,13 +63,43 @@ export function AreaIssues({ onViewIssue }) {
     status: "all",
   });
 
+  // Fetch issues on mount
+  useEffect(() => {
+    fetchIssues();
+  }, []);
+
+  const fetchIssues = async () => {
+    setLoading(true);
+    try {
+      const response = await issueService.getIssues({ limit: 100 });
+      const fetchedIssues = response?.data?.issues || [];
+      
+      // Transform issues to match expected format
+      const transformedIssues = fetchedIssues.map(issue => ({
+        ...issue,
+        id: issue._id,
+        upvotes: issue.upvotes?.length || 0,
+        comments: issue.comments?.length || 0,
+        verifications: issue.verifiedCount || 0,
+        image: issue.images?.[0] || null,
+        reporter: issue.reportedBy?.username || "Anonymous",
+      }));
+      
+      setIssues(transformedIssues);
+    } catch (err) {
+      console.error("Error fetching issues:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredIssues = issues.filter((issue) => {
     const matchesSearch =
-      issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      issue.description.toLowerCase().includes(searchQuery.toLowerCase());
+      issue.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      issue.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesNeighborhood =
       filters.neighborhood === "all" ||
-      issue.location.neighborhood.toLowerCase() === filters.neighborhood;
+      issue.location?.neighborhood?.toLowerCase() === filters.neighborhood;
     const matchesCategory =
       filters.category === "all" || issue.category === filters.category;
     const matchesStatus =
@@ -181,6 +120,15 @@ export function AreaIssues({ onViewIssue }) {
     return "Just now";
   };
 
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+        <span className="ml-2 text-white/60">Loading area issues...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -192,6 +140,13 @@ export function AreaIssues({ onViewIssue }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={fetchIssues}
+            className="rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white"
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
             <input

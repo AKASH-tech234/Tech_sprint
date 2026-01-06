@@ -4,6 +4,7 @@ export { DashboardLayout } from "./Shared/DashboardLayout";
 export { Header } from "./Shared/Header";
 export { Sidebar } from "./Shared/Sidebar";
 export { StatsCard } from "./Shared/StatsCard";
+export { PublicVerificationSection } from "./Shared/PublicVerificationSection";
 
 // Citizen Components
 export { IssueCard } from "./Citizen/issuecard";
@@ -20,3 +21,4 @@ export { Analytics } from "./Official/Analytics";
 export { AreaIssues } from "./Community/areaissue";
 export { VerificationPanel } from "./Community/verificationpanel";
 export { CommunityStats } from "./Community/communitystats";
+export { VerificationQueue } from "./Community/VerificationQueue";

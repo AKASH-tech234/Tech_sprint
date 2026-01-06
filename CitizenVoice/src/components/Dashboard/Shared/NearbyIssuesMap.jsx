@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Navigation, Maximize2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { issueService } from "../../../services/issueService";
 
 // Custom marker icon
 const createMarkerIcon = (status) => {
@@ -64,58 +65,31 @@ export function NearbyIssuesMap({ role = "citizen", compact = false }) {
     }
   }, []);
 
-  const loadNearbyIssues = (lat, lng) => {
-    /**
-     * BACKEND API CALL: Get Nearby Issues
-     * Endpoint: GET /api/issues/nearby?lat={lat}&lng={lng}&radius=2000
-     * Returns: { success: true, issues: [...] }
-     */
-    
-    // Load from localStorage + mock data
-    const userIssues = JSON.parse(localStorage.getItem("userIssues") || "[]");
-    
-    // Mock nearby issues (within 2km radius)
-    const mockIssues = [
-      {
-        id: "NEAR-001",
-        title: "Pothole on Main St",
-        category: "pothole",
-        status: "reported",
-        location: { lat: lat + 0.005, lng: lng + 0.005 },
-        distance: "0.5 km",
-      },
-      {
-        id: "NEAR-002",
-        title: "Broken Street Light",
-        category: "streetlight",
-        status: "in-progress",
-        location: { lat: lat - 0.008, lng: lng + 0.003 },
-        distance: "0.8 km",
-      },
-      {
-        id: "NEAR-003",
-        title: "Graffiti Removal",
-        category: "graffiti",
-        status: "acknowledged",
-        location: { lat: lat + 0.01, lng: lng - 0.005 },
-        distance: "1.2 km",
-      },
-      {
-        id: "NEAR-004",
-        title: "Garbage Pile",
-        category: "garbage",
-        status: "reported",
-        location: { lat: lat - 0.005, lng: lng - 0.008 },
-        distance: "0.9 km",
-      },
-    ];
-
-    const allNearbyIssues = [...userIssues, ...mockIssues].filter(
-      (issue) => issue.location && issue.location.lat && issue.location.lng
-    );
-
-    setNearbyIssues(allNearbyIssues.slice(0, 10)); // Show max 10
-    setLoading(false);
+  const loadNearbyIssues = async (lat, lng) => {
+    try {
+      // Fetch issues from backend API
+      const response = await issueService.getIssues();
+      const apiIssues = response.data?.issues || response.issues || [];
+      
+      // Filter issues with valid location and calculate approximate distance
+      const issuesWithLocation = apiIssues
+        .filter((issue) => issue.location && issue.location.lat && issue.location.lng)
+        .map((issue) => {
+          // Calculate approximate distance in km
+          const dLat = issue.location.lat - lat;
+          const dLng = issue.location.lng - lng;
+          const dist = Math.sqrt(dLat * dLat + dLng * dLng) * 111; // Approximate km
+          return { ...issue, distance: `${dist.toFixed(1)} km` };
+        })
+        .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+      
+      setNearbyIssues(issuesWithLocation.slice(0, 10)); // Show max 10
+    } catch (err) {
+      console.error('Error loading nearby issues:', err);
+      setNearbyIssues([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleViewFullMap = () => {

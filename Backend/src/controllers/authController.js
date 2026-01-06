@@ -186,18 +186,29 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
+  // Recalculate profile completion status
+  const isProfileComplete = user.checkProfileCompletion ? user.checkProfileCompletion() : false;
+
   const userData = {
     id: user._id,
     username: user.username,
     email: user.email,
     role: user.role,
     avatar: user.avatar || null,
+    profilePhoto: user.profilePhoto || null,
+    // Profile completion fields
+    isProfileComplete: isProfileComplete,
+    fullAddress: user.fullAddress || null,
+    aadhaarNumber: user.aadhaarNumber || null,
+    mobileNumber: user.mobileNumber || null,
+    // Role-specific details
     officialDetails: user.role === 'official' ? (user.officialDetails || {}) : undefined,
+    communityDetails: user.role === 'community' ? (user.communityDetails || {}) : undefined,
     isOfficialAdmin: isOfficialAdmin(user),
     createdAt: user.createdAt,
   };
 
-  console.log("✅ [Backend] Current user data:", userData);
+  console.log("✅ [Backend] Current user data:", { ...userData, aadhaarNumber: userData.aadhaarNumber ? '****' : null });
   res.json(new ApiResponse(200, userData, "User data fetched successfully"));
 });
 

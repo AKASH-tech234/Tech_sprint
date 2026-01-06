@@ -395,6 +395,9 @@ import issueRoutes from "./src/routes/issueRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import officialRoutes from "./src/routes/officialRoutes.js";
 import messageRoutes from "./src/routes/messageRoutes.js";
+import userRoutes from "./src/routes/userRoutes.js";
+import verificationRoutes from "./src/routes/verificationRoutes.js";
+import notificationRoutes from "./src/routes/notificationRoutes.js";
 
 import Message from "./src/models/message.js";
 
@@ -412,6 +415,13 @@ const uploadsDir = path.join(__dirname, "uploads", "issues");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
   console.log("📁 Created uploads directory");
+}
+
+// Create profiles uploads directory
+const profilesDir = path.join(__dirname, "uploads", "profiles");
+if (!fs.existsSync(profilesDir)) {
+  fs.mkdirSync(profilesDir, { recursive: true });
+  console.log("📁 Created profiles uploads directory");
 }
 
 const app = express();
@@ -437,6 +447,8 @@ io.on("connection", (socket) => {
 
   socket.on("join", (userId) => {
     socket.join(userId);
+    // Also join a user-specific room for notifications
+    socket.join(`user_${userId}`);
     onlineUsers.set(userId, socket.id);
     console.log(`👤 User ${userId} joined room`);
     
@@ -517,6 +529,12 @@ app.use("/api/auth", authRoutes);
 app.use("/api/issues", issueRoutes);
 app.use("/api/officials", officialRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/verification", verificationRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+// Make io accessible in controllers
+app.set('io', io);
 
 
 app.get("/", (req, res) => {
