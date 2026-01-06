@@ -68,7 +68,16 @@ const issueSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }]
+  }],
+  // Community verification counts
+  verifiedCount: {
+    type: Number,
+    default: 0
+  },
+  incorrectCount: {
+    type: Number,
+    default: 0
+  }
 }, {
   timestamps: true
 });

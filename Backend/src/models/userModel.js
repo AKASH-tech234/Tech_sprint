@@ -44,16 +44,59 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    profilePhoto: {
+      type: String,
+      default: null,
+    },
     // Additional profile fields
     phone: {
       type: String,
       default: null,
     },
+    // Full Address for profile completion
+    fullAddress: {
+      houseNo: { type: String, default: null },
+      area: { type: String, default: null },
+      city: { type: String, default: null },
+      district: { type: String, default: null },
+      state: { type: String, default: null },
+      pincode: { type: String, default: null },
+    },
+    // Legacy address (for backward compatibility)
     address: {
       street: String,
       city: String,
       state: String,
       zipCode: String,
+    },
+    // Aadhaar Number (12 digits)
+    aadhaarNumber: {
+      type: String,
+      default: null,
+      validate: {
+        validator: function(v) {
+          if (!v) return true; // Allow null
+          return /^\d{12}$/.test(v);
+        },
+        message: 'Aadhaar number must be exactly 12 digits'
+      }
+    },
+    // Mobile Number (10 digits)
+    mobileNumber: {
+      type: String,
+      default: null,
+      validate: {
+        validator: function(v) {
+          if (!v) return true; // Allow null
+          return /^[6-9]\d{9}$/.test(v);
+        },
+        message: 'Mobile number must be a valid 10-digit Indian number'
+      }
+    },
+    // Profile completion status
+    isProfileComplete: {
+      type: Boolean,
+      default: false,
     },
     // Role-specific fields
     officialDetails: {
@@ -87,5 +130,21 @@ const userSchema = new mongoose.Schema(
 
 // Index for role queries (email and username already indexed via unique: true)
 userSchema.index({ role: 1 });
+
+// Method to check if profile is complete
+userSchema.methods.checkProfileCompletion = function() {
+  const hasAddress = this.fullAddress && 
+    this.fullAddress.houseNo && 
+    this.fullAddress.area && 
+    this.fullAddress.city && 
+    this.fullAddress.district && 
+    this.fullAddress.state && 
+    this.fullAddress.pincode;
+  
+  const hasAadhaar = this.aadhaarNumber && /^\d{12}$/.test(this.aadhaarNumber);
+  const hasMobile = this.mobileNumber && /^[6-9]\d{9}$/.test(this.mobileNumber);
+  
+  return hasAddress && hasAadhaar && hasMobile;
+};
 
 export const User = mongoose.model("User", userSchema);

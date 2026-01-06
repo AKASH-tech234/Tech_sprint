@@ -326,28 +326,20 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
         // Update existing issue
         result = await issueService.updateIssue(initialData._id, formDataToSend);
       } else {
-        // Create new issue
+        // Create new issue - saved to MongoDB via API
         result = await issueService.createIssue(formDataToSend);
         
-        // Store the new issue in localStorage temporarily (for immediate display)
-        const newIssue = {
-          id: result.issue?.id || `ISS-${Date.now()}`,
-          ...formData,
-          images: imagePreviews,
-          upvotes: 0,
-          comments: [],
-          status: 'reported',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
+        // Clean up any old localStorage data to prevent quota errors
+        try {
+          localStorage.removeItem('userIssues');
+        } catch (e) {
+          console.warn('Could not clean localStorage:', e);
+        }
 
-        // Save to localStorage for immediate reflection
-        const existingIssues = JSON.parse(localStorage.getItem('userIssues') || '[]');
-        localStorage.setItem('userIssues', JSON.stringify([newIssue, ...existingIssues]));
-
-        // Dispatch custom event to notify other components
-        window.dispatchEvent(new CustomEvent('issueCreated', { detail: newIssue }));
-        console.log("✅ Issue saved and event dispatched:", newIssue.id);
+        // Dispatch custom event to notify other components to refresh from API
+        const newIssue = result.issue || result.data?.issue || { id: `ISS-${Date.now()}` };
+        window.dispatchEvent(new CustomEvent('issueCreated', { detail: { id: newIssue._id || newIssue.id } }));
+        console.log("✅ Issue created in database:", newIssue._id || newIssue.id);
       }
       
       clearInterval(progressInterval);

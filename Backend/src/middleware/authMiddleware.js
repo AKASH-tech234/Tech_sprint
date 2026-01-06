@@ -57,3 +57,46 @@ export const restrictTo = (...roles) => {
     next();
   };
 };
+
+// Check if profile is complete (for citizens reporting issues)
+export const requireProfileComplete = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user._id);
+  
+  if (!user) {
+    throw new ApiError(401, "User not found");
+  }
+
+  // Check profile completion
+  const isComplete = user.checkProfileCompletion();
+  
+  if (!isComplete) {
+    throw new ApiError(403, "Please complete your profile to perform this action", {
+      code: "PROFILE_INCOMPLETE",
+      redirectTo: "/profile",
+    });
+  }
+
+  next();
+});
+
+// RBAC middleware for specific actions
+export const rbac = (allowedRoles, options = {}) => {
+  return (req, res, next) => {
+    const userRole = req.user.role;
+    
+    // Check if user role is allowed
+    if (!allowedRoles.includes(userRole)) {
+      throw new ApiError(403, "You do not have permission to perform this action");
+    }
+
+    // Check profile completion if required
+    if (options.requireProfile && !req.user.isProfileComplete) {
+      throw new ApiError(403, "Please complete your profile first", {
+        code: "PROFILE_INCOMPLETE",
+        redirectTo: "/profile",
+      });
+    }
+
+    next();
+  };
+};

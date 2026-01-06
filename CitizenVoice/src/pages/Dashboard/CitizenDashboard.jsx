@@ -1,5 +1,5 @@
 // src/pages/Dashboard/CitizenDashboard.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { DashboardLayout } from "../../components/Dashboard/Shared/DashboardLayout";
@@ -10,7 +10,9 @@ import { ReportIssue } from "../../components/Dashboard/Citizen/reportissue";
 import { IssueMap } from "../../components/Dashboard/Citizen/IssueMap";
 import { NearbyIssuesMap } from "../../components/Dashboard/Shared/NearbyIssuesMap";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
+import { ProfileIncompleteModal } from "../../components/ProfileIncompleteModal";
 import { issueService } from "../../services/issueService";
+import { userService } from "../../services/userService";
 import {
   FileText,
   Clock,
@@ -83,9 +85,35 @@ const mockRecentIssues = [
 function DashboardHome() {
   const navigate = useNavigate();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isProfileComplete, setIsProfileComplete] = useState(null);
   const [stats, setStats] = useState(mockStats);
   const [recentIssues, setRecentIssues] = useState(mockRecentIssues);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Check profile completion on mount
+  useEffect(() => {
+    const checkProfile = async () => {
+      try {
+        const response = await userService.checkProfileCompletion();
+        // Backend returns isProfileComplete in data object
+        setIsProfileComplete(response.data?.isProfileComplete ?? response.isProfileComplete ?? false);
+      } catch (error) {
+        console.error("Error checking profile:", error);
+        setIsProfileComplete(true); // Default to allow if check fails
+      }
+    };
+    checkProfile();
+  }, []);
+
+  // Handle report button click
+  const handleReportClick = () => {
+    if (isProfileComplete === false) {
+      setShowProfileModal(true);
+    } else {
+      setShowReportModal(true);
+    }
+  };
 
   // Load issues from localStorage on mount and when refreshKey changes
   React.useEffect(() => {
@@ -228,7 +256,7 @@ function DashboardHome() {
           </p>
         </div>
         <button
-          onClick={() => setShowReportModal(true)}
+          onClick={handleReportClick}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-violet-500 px-6 py-3 font-medium text-white transition-all hover:scale-105 hover:shadow-lg hover:shadow-rose-500/25"
         >
           <Plus className="h-5 w-5" />
@@ -312,6 +340,12 @@ function DashboardHome() {
         onClose={() => setShowReportModal(false)}
         onSuccess={handleIssueCreated}
       />
+
+      {/* Profile Incomplete Modal */}
+      <ProfileIncompleteModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
     </div>
   );
 }
@@ -336,21 +370,67 @@ export default function CitizenDashboard() {
 
 // Placeholder pages for routes
 function ReportIssuePage() {
-  const showModal = true;
+  const [showModal, setShowModal] = useState(true);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isProfileComplete, setIsProfileComplete] = useState(null);
+  const [checkingProfile, setCheckingProfile] = useState(true);
   const navigate = useNavigate();
+
+  // Check profile completion on mount
+  useEffect(() => {
+    const checkProfile = async () => {
+      try {
+        const response = await userService.checkProfileCompletion();
+        // Backend returns isProfileComplete in data object
+        const complete = response.data?.isProfileComplete ?? response.isProfileComplete ?? false;
+        setIsProfileComplete(complete);
+        if (!complete) {
+          setShowProfileModal(true);
+          setShowModal(false);
+        }
+      } catch (error) {
+        console.error("Error checking profile:", error);
+        // Allow reporting if check fails (backend will enforce)
+        setIsProfileComplete(true);
+      } finally {
+        setCheckingProfile(false);
+      }
+    };
+    checkProfile();
+  }, []);
 
   const handleSuccess = (newIssue) => {
     console.log("Issue created:", newIssue);
     navigate("/dashboard/citizen/issues");
   };
 
+  if (checkingProfile) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <ReportIssue
-        isOpen={showModal}
-        onClose={() => navigate("/dashboard/citizen")}
-        onSuccess={handleSuccess}
+      {/* Profile Incomplete Modal */}
+      <ProfileIncompleteModal
+        isOpen={showProfileModal}
+        onClose={() => {
+          setShowProfileModal(false);
+          navigate("/dashboard/citizen");
+        }}
       />
+
+      {/* Report Issue Modal - only show if profile is complete */}
+      {isProfileComplete && (
+        <ReportIssue
+          isOpen={showModal}
+          onClose={() => navigate("/dashboard/citizen")}
+          onSuccess={handleSuccess}
+        />
+      )}
     </div>
   );
 }

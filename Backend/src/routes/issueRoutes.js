@@ -12,7 +12,7 @@ import {
   updateIssue
 } from '../controllers/issueController.js';
 import { submitReport, getIssueReports } from '../controllers/reportController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, requireProfileComplete, restrictTo } from '../middleware/authMiddleware.js';
 import { uploadIssueImages } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
@@ -20,8 +20,8 @@ const router = express.Router();
 // All routes require authentication
 router.use(protect);
 
-// Issue CRUD
-router.post('/create', uploadIssueImages, createIssue);
+// Issue CRUD - citizens must have complete profile to create
+router.post('/create', restrictTo('citizen'), requireProfileComplete, uploadIssueImages, createIssue);
 router.get('/my-issues', getMyIssues);
 router.get('/recent', getRecentIssues);
 router.get('/all', getAllIssues); // Must be before /:issueId

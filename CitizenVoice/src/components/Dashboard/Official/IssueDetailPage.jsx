@@ -25,6 +25,7 @@ import { issueService } from "../../../services/issueService";
 import { useAuth } from "../../../context/AuthContext";
 import { VerificationFormModal } from "./VerificationFormModal";
 import { ResolutionFormModal } from "./ResolutionFormModal";
+import { PublicVerificationSection } from "../Shared/PublicVerificationSection";
 
 // Status configuration
 const statusConfig = {
@@ -427,6 +428,9 @@ export function IssueDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Community Verification Stats */}
+          <PublicVerificationSection issueId={issue._id} userRole="official" />
 
           {/* Action Panel for Non-Admin Officials */}
           {!isOfficialAdmin && (

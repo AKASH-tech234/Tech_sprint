@@ -1,6 +1,7 @@
 // src/components/Dashboard/Community/CommunityStats.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "../../../lib/utils";
+import { issueService } from "../../../services/issueService";
 import {
   TrendingUp,
   TrendingDown,
@@ -16,6 +17,8 @@ import {
   Activity,
   Trophy,
   Star,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 
 // Mock community stats
@@ -113,9 +116,138 @@ const mockDepartmentPerformance = [
 
 export function CommunityStats() {
   const [timeRange, setTimeRange] = useState("month");
+  const [loading, setLoading] = useState(true);
+  const [overviewStats, setOverviewStats] = useState([]);
+  const [categoryBreakdown, setCategoryBreakdown] = useState([]);
+  const [monthlyTrend, setMonthlyTrend] = useState([]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [timeRange]);
+
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      const response = await issueService.getIssues({ limit: 500 });
+      const issues = response?.data?.issues || [];
+
+      // Calculate overview stats
+      const totalIssues = issues.length;
+      const resolvedIssues = issues.filter(i => i.status === 'resolved').length;
+      const activeIssues = issues.filter(i => ['reported', 'acknowledged', 'in-progress'].includes(i.status)).length;
+      const resolutionRate = totalIssues > 0 ? Math.round((resolvedIssues / totalIssues) * 100) : 0;
+
+      // Calculate average resolution time (in days)
+      const resolvedWithTime = issues.filter(i => i.status === 'resolved' && i.updatedAt && i.createdAt);
+      const avgResolutionTime = resolvedWithTime.length > 0
+        ? (resolvedWithTime.reduce((acc, issue) => {
+            const created = new Date(issue.createdAt);
+            const resolved = new Date(issue.updatedAt);
+            return acc + (resolved - created) / (1000 * 60 * 60 * 24);
+          }, 0) / resolvedWithTime.length).toFixed(1)
+        : "N/A";
+
+      setOverviewStats([
+        {
+          title: "Total Area Issues",
+          value: totalIssues.toString(),
+          change: `+${activeIssues}`,
+          trend: "up",
+          period: "active",
+          icon: FileText,
+          color: "rose",
+        },
+        {
+          title: "Resolution Rate",
+          value: `${resolutionRate}%`,
+          change: `${resolvedIssues} resolved`,
+          trend: "up",
+          period: "",
+          icon: CheckCircle2,
+          color: "emerald",
+        },
+        {
+          title: "Active Issues",
+          value: activeIssues.toString(),
+          change: "needs attention",
+          trend: activeIssues > 10 ? "down" : "up",
+          period: "",
+          icon: Users,
+          color: "violet",
+        },
+        {
+          title: "Avg. Resolution Time",
+          value: avgResolutionTime !== "N/A" ? `${avgResolutionTime} days` : "N/A",
+          change: "",
+          trend: "up",
+          period: "",
+          icon: Clock,
+          color: "cyan",
+        },
+      ]);
+
+      // Calculate category breakdown
+      const categoryCounts = {};
+      issues.forEach(issue => {
+        const cat = issue.category || 'other';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      });
+
+      const categoryData = Object.entries(categoryCounts)
+        .map(([category, count]) => ({
+          category: category.charAt(0).toUpperCase() + category.slice(1),
+          count,
+          percentage: Math.round((count / totalIssues) * 100),
+          trend: "stable"
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      setCategoryBreakdown(categoryData);
+
+      // Calculate monthly trend (last 6 months)
+      const monthlyData = {};
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      issues.forEach(issue => {
+        const date = new Date(issue.createdAt);
+        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { month: months[date.getMonth()], reported: 0, resolved: 0 };
+        }
+        monthlyData[monthKey].reported++;
+        if (issue.status === 'resolved') {
+          monthlyData[monthKey].resolved++;
+        }
+      });
+
+      const trendData = Object.values(monthlyData)
+        .sort((a, b) => months.indexOf(a.month) - months.indexOf(b.month))
+        .slice(-6);
+
+      setMonthlyTrend(trendData.length > 0 ? trendData : [
+        { month: 'N/A', reported: 0, resolved: 0 }
+      ]);
+
+    } catch (err) {
+      console.error("Error fetching stats:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const maxTrendValue = Math.max(
-    ...mockMonthlyTrend.flatMap((m) => [m.reported, m.resolved])
+    ...monthlyTrend.flatMap((m) => [m.reported, m.resolved]),
+    1
   );
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+        <span className="ml-2 text-white/60">Loading statistics...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -130,6 +262,13 @@ export function CommunityStats() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={fetchStats}
+            className="rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white"
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
           <div className="flex overflow-hidden rounded-lg border border-white/10">
             {["week", "month", "quarter", "year"].map((range) => (
               <button
@@ -159,7 +298,7 @@ export function CommunityStats() {
 
       {/* Overview Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {mockOverviewStats.map((stat, index) => {
+        {overviewStats.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <div
@@ -219,7 +358,7 @@ export function CommunityStats() {
             Monthly Trend
           </h3>
           <div className="flex h-48 items-end gap-3">
-            {mockMonthlyTrend.map((month) => (
+            {monthlyTrend.map((month) => (
               <div
                 key={month.month}
                 className="group flex flex-1 flex-col items-center gap-1"
@@ -261,7 +400,7 @@ export function CommunityStats() {
             Issues by Category
           </h3>
           <div className="space-y-4">
-            {mockCategoryBreakdown.map((item) => (
+            {categoryBreakdown.map((item) => (
               <div key={item.category} className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-white">{item.category}</span>

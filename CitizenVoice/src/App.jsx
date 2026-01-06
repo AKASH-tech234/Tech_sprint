@@ -8,6 +8,7 @@ import {
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/projectedroute";
 import { Landing, SignUp, Login } from "./pages";
+import Profile from "./pages/Profile";
 
 // Dashboard imports
 import CitizenDashboard from "./pages/Dashboard/CitizenDashboard";
@@ -23,6 +24,16 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
+
+          {/* Profile Route - Protected for all authenticated users */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allowedRoles={["citizen", "official", "community"]}>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected Dashboard Routes - Note the /* for nested routes */}
           <Route

@@ -1,6 +1,6 @@
 // src/components/Dashboard/Shared/Sidebar.jsx
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "../../../lib/utils";
 import { useAuth } from "../../../context/AuthContext";
 import {
@@ -19,6 +19,7 @@ import {
   X,
   MessageSquare,
   ClipboardCheck,
+  User,
 } from "lucide-react";
 
 // Menu configurations by role
@@ -200,6 +201,24 @@ export function Sidebar({ isOpen, onClose, role = "citizen" }) {
 
         {/* User section at bottom */}
         <div className="border-t border-white/10 p-4">
+          {/* Profile Link */}
+          <NavLink
+            to="/profile"
+            onClick={onClose}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all mb-3",
+              location.pathname === "/profile"
+                ? "bg-gradient-to-r from-rose-500/20 to-violet-500/20 text-white"
+                : "text-white/60 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            <User className="h-5 w-5" />
+            <span>Profile</span>
+            {!user?.isProfileComplete && (
+              <span className="ml-auto flex h-2 w-2 rounded-full bg-amber-500" />
+            )}
+          </NavLink>
+          
           <div className="flex items-center gap-3 rounded-lg bg-white/5 p-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500">
               <span className="text-sm font-semibold text-white">
