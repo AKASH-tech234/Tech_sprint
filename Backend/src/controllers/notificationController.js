@@ -48,6 +48,7 @@ export const markAsRead = asyncHandler(async (req, res) => {
     _id: notificationId,
     recipient: userId,
   });
+  
 
   if (!notification) {
     throw new ApiError(404, 'Notification not found');
