@@ -4,6 +4,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
 import { isOfficialAdmin } from '../utils/officialPermissions.js';
+import { imageClassificationService } from '../services/imageClassificationService.js';
 
 // Helper function to extract public_id from Cloudinary URL
 const getPublicIdFromUrl = (url) => {
@@ -58,13 +59,13 @@ export const createIssue = asyncHandler(async (req, res) => {
   console.log('📝 [CreateIssue] Body:', req.body);
   console.log('📝 [CreateIssue] Files:', req.files ? req.files.length : 0);
   
-  const { title, description, category, priority, location } = req.body;
+  let { title, description, category, priority, location, useAiClassification } = req.body;
   
   // Parse location JSON string
   const locationData = typeof location === 'string' ? JSON.parse(location) : location;
   
   // Validate required fields
-  if (!title || !description || !category || !locationData) {
+  if (!title || !description || !locationData) {
     throw new ApiError(400, 'Missing required fields');
   }
   
@@ -100,18 +101,64 @@ export const createIssue = asyncHandler(async (req, res) => {
   
   console.log('📸 [CreateIssue] Final image URLs:', imageUrls);
   
+  // AI Classification (if enabled and images available)
+  let aiClassification = null;
+  if ((useAiClassification === 'true' || useAiClassification === true) && req.files && req.files.length > 0) {
+    try {
+      console.log('🤖 [AI Classification] Starting image analysis...');
+      const classificationResult = await imageClassificationService.classifyIssueImage(req.files[0].path);
+      
+      if (classificationResult.success) {
+        aiClassification = classificationResult.data;
+        console.log('🤖 [AI Classification] Result:', aiClassification);
+        
+        // If category not provided by user, use AI suggestion
+        if (!category || category === 'other') {
+          category = aiClassification.category;
+          console.log(`🤖 [AI Classification] Auto-assigned category: ${category}`);
+        }
+        
+        // If priority not provided, use AI suggestion
+        if (!priority) {
+          priority = aiClassification.priority;
+          console.log(`🤖 [AI Classification] Auto-assigned priority: ${priority}`);
+        }
+      }
+    } catch (error) {
+      console.error('❌ [AI Classification] Failed:', error);
+      // Continue without AI classification if it fails
+    }
+  }
+  
+  // Fallback to defaults if still not set
+  if (!category) category = 'other';
+  if (!priority) priority = 'medium';
+  
   // Create issue
   let issue;
   try {
-    issue = await Issue.create({
+    const issueData = {
       title,
       description,
       category,
-      priority: priority || 'medium',
+      priority,
       location: locationData,
       images: imageUrls,
       reportedBy: req.user._id
-    });
+    };
+    
+    // Add AI classification metadata if available
+    if (aiClassification) {
+      issueData.aiClassification = {
+        suggestedCategory: aiClassification.category,
+        confidence: aiClassification.confidence,
+        suggestedPriority: aiClassification.priority,
+        aiDescription: aiClassification.description,
+        classifiedAt: new Date()
+      };
+    }
+    
+    issue = await Issue.create(issueData);
     
     console.log('✅ [CreateIssue] Issue created with images:', issue.images);
   } catch (error) {
@@ -126,8 +173,24 @@ export const createIssue = asyncHandler(async (req, res) => {
   // Populate user details
   await issue.populate('reportedBy', 'username email avatar');
   
+  // Include AI classification in response
+  const responseData = {
+    ...issue.toObject(),
+    ...(aiClassification && { 
+      aiSuggestions: {
+        category: aiClassification.category,
+        priority: aiClassification.priority,
+        confidence: aiClassification.confidence,
+        description: aiClassification.description
+      }
+    })
+  };
+  
   res.status(201).json(
-    new ApiResponse(201, issue, 'Issue created successfully')
+    new ApiResponse(201, responseData, aiClassification 
+      ? `Issue created successfully with AI classification (${aiClassification.confidence}% confidence)`
+      : 'Issue created successfully'
+    )
   );
 });
 

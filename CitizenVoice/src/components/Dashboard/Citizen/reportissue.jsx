@@ -14,6 +14,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { issueService } from "../../../services/issueService";
+import ClassificationResults from "../../ClassificationResults";
+import { Sparkles } from "lucide-react";
 
 /**
  * BACKEND API ENDPOINTS REQUIRED:
@@ -72,6 +74,11 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
   const [success, setSuccess] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
+  
+  // AI Classification states
+  const [useAiClassification, setUseAiClassification] = useState(true);
+  const [aiClassification, setAiClassification] = useState(null);
+  const [isClassifying, setIsClassifying] = useState(false);
 
   // Initialize form data when editing
   useEffect(() => {
@@ -120,7 +127,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     
     // Validation
@@ -162,11 +169,73 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
     });
 
     setImages((prev) => [...prev, ...files]);
+    
+    // Trigger AI classification if enabled
+    if (useAiClassification && files.length > 0 && !editMode) {
+      await classifyImage(files[0]);
+    }
   };
 
   const removeImage = (index) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // AI Classification function
+  const classifyImage = async (imageFile) => {
+    setIsClassifying(true);
+    setError(null);
+    setAiClassification(null);
+
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const formDataToSend = new FormData();
+      formDataToSend.append('images', imageFile);
+
+      const response = await fetch(`${API_BASE_URL}/classification/classify`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        credentials: 'include',
+        body: formDataToSend
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setAiClassification(result.data);
+        console.log('🤖 AI Classification:', result.data);
+      } else {
+        console.warn('AI classification failed:', result.message);
+        setError('AI classification unavailable. Please select category manually.');
+        setTimeout(() => setError(null), 3000);
+      }
+    } catch (error) {
+      console.error('Classification error:', error);
+      setError('Failed to classify image. Please select category manually.');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setIsClassifying(false);
+    }
+  };
+
+  // Accept AI suggestion
+  const handleAcceptAI = () => {
+    if (aiClassification) {
+      setFormData(prev => ({
+        ...prev,
+        category: aiClassification.category,
+        priority: aiClassification.priority,
+        description: prev.description || aiClassification.description
+      }));
+      setAiClassification(null); // Hide the AI results after accepting
+    }
+  };
+
+  // Reject AI and show manual selection
+  const handleRejectAI = () => {
+    setAiClassification(null);
   };
 
   const getCurrentLocation = () => {
@@ -303,6 +372,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
       formDataToSend.append('category', formData.category);
       formDataToSend.append('priority', formData.priority);
       formDataToSend.append('location', JSON.stringify(formData.location));
+      formDataToSend.append('useAiClassification', useAiClassification.toString());
       
       // Append new images (if any)
       images.forEach((image, index) => {
@@ -416,6 +486,46 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
               <div className="mb-4 flex items-center gap-2 rounded-lg bg-rose-500/20 p-3 text-sm text-rose-400">
                 <AlertTriangle className="h-4 w-4" />
                 {error}
+              </div>
+            )}
+
+            {/* AI Classification Toggle */}
+            {!editMode && (
+              <div className="mb-6 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={useAiClassification}
+                    onChange={(e) => setUseAiClassification(e.target.checked)}
+                    className="h-5 w-5 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-blue-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-blue-400" />
+                    <span className="font-medium text-white">Enable AI Auto-Classification</span>
+                  </div>
+                </label>
+                <p className="ml-8 mt-2 text-sm text-white/60">
+                  AI will automatically detect and categorize your issue from the uploaded image
+                </p>
+              </div>
+            )}
+
+            {/* AI Classification Loading */}
+            {isClassifying && (
+              <div className="mb-6 flex items-center justify-center gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-blue-400">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="font-medium">Analyzing image with AI...</span>
+              </div>
+            )}
+
+            {/* AI Classification Results */}
+            {aiClassification && !isClassifying && (
+              <div className="mb-6">
+                <ClassificationResults
+                  classification={aiClassification}
+                  onAccept={handleAcceptAI}
+                  onReject={handleRejectAI}
+                />
               </div>
             )}
 

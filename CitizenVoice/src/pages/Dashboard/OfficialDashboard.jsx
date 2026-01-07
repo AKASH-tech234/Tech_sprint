@@ -11,7 +11,7 @@ import { Analytics } from "../../components/Dashboard/Official/Analytics";
 import { ReviewQueue } from "../../components/Dashboard/Official/ReviewQueue";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import { issueService } from "../../services/issueService";
-import { useAuth } from "../../context/Authcontext";
+import { useAuth } from "../../context/AuthContext";
 import {
   Inbox,
   Users,

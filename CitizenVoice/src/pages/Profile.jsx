@@ -204,7 +204,7 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto h-12 w-12 animate-spin text-rose-500" />
           <p className="mt-4 text-white/60">Loading profile...</p>
@@ -214,7 +214,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-8 px-4">
+    <div className="min-h-screen bg-[#0a0a0a] py-8 px-4">
       <div className="mx-auto max-w-4xl">
         {/* Header */}
         <div className="mb-8">

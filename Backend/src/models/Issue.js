@@ -77,6 +77,28 @@ const issueSchema = new mongoose.Schema({
   incorrectCount: {
     type: Number,
     default: 0
+  },
+  // AI Classification metadata
+  aiClassification: {
+    suggestedCategory: {
+      type: String,
+      enum: ['pothole', 'streetlight', 'garbage', 'water', 'traffic', 'noise', 'safety', 'other']
+    },
+    confidence: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    suggestedPriority: {
+      type: String,
+      enum: ['low', 'medium', 'high']
+    },
+    aiDescription: String,
+    classifiedAt: Date,
+    alternativeCategories: [{
+      category: String,
+      probability: Number
+    }]
   }
 }, {
   timestamps: true

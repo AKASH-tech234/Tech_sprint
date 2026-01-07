@@ -379,10 +379,13 @@
 
 // when using google authentication make sure to put client ID in frontend and backend 
 
+import dotenv from "dotenv";
+// Load environment variables FIRST before any other imports
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import http from "http";
 import { Server } from "socket.io";
 import cookieParser from "cookie-parser";
@@ -398,13 +401,9 @@ import messageRoutes from "./src/routes/messageRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import verificationRoutes from "./src/routes/verificationRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
+import classificationRoutes from "./src/routes/classificationRoutes.js";
 
 import Message from "./src/models/message.js";
-
-
-
-// Load environment variables FIRST
-dotenv.config();
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -532,6 +531,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/verification", verificationRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/classification", classificationRoutes);
 
 // Make io accessible in controllers
 app.set('io', io);
