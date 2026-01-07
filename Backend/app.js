@@ -443,14 +443,14 @@ const io = new Server(server, {
 const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
-  console.log("🟢 Socket connected:", socket.id);
+  console.log(" Socket connected:", socket.id);
 
   socket.on("join", (userId) => {
     socket.join(userId);
     // Also join a user-specific room for notifications
     socket.join(`user_${userId}`);
     onlineUsers.set(userId, socket.id);
-    console.log(`👤 User ${userId} joined room`);
+    console.log(` User ${userId} joined room`);
     
     // Broadcast user online status
     io.emit("userOnline", userId);
@@ -479,7 +479,7 @@ io.on("connection", (socket) => {
       // Also send back to sender for confirmation
       io.to(senderId).emit("messageSent", messageData);
     } catch (error) {
-      console.error("❌ Message save failed:", error);
+      console.error(" Message save failed:", error);
       socket.emit("messageError", { error: "Failed to send message" });
     }
   });
@@ -501,7 +501,7 @@ io.on("connection", (socket) => {
         break;
       }
     }
-    console.log("🔴 Socket disconnected:", socket.id);
+    console.log(" Socket disconnected:", socket.id);
   });
 });
 
@@ -569,7 +569,7 @@ app.use((err, req, res, next) => {
     });
   }
 
-  console.error("❌ Error:", err);
+  console.error(" Error:", err);
   res.status(err.statusCode || 500).json({
     success: false,
     message: err.message || "Internal Server Error",
@@ -580,25 +580,25 @@ app.use((err, req, res, next) => {
 const start = async () => {
   try {
     const connectionDb = await mongoose.connect(process.env.MONGO_URI);
-    console.log(`✅ MONGO Connected: ${connectionDb.connection.host}`);
+    console.log(` MONGO Connected: ${connectionDb.connection.host}`);
 
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
+      console.log(` Server running on port ${PORT}`);
     });
   } catch (err) {
-    console.error("❌ Failed to connect to MongoDB", err);
+    console.error(" Failed to connect to MongoDB", err);
     process.exit(1);
   }
 };
 
 // Process safety
 process.on("unhandledRejection", (reason) => {
-  console.error("❌ Unhandled Rejection:", reason);
+  console.error(" Unhandled Rejection:", reason);
 });
 
 process.on("uncaughtException", (error) => {
-  console.error("❌ Uncaught Exception:", error);
+  console.error("Uncaught Exception:", error);
 });
 
 start();
