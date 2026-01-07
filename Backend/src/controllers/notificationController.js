@@ -5,6 +5,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 
 // Get user notifications
+
 export const getNotifications = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { page = 1, limit = 20, unreadOnly = false } = req.query;
