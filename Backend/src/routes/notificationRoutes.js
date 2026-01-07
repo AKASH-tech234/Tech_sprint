@@ -14,6 +14,7 @@ const router = express.Router();
 // All routes require authentication
 router.use(protect);
 
+
 // Notification routes
 router.get('/', getNotifications);
 router.get('/unread-count', getUnreadCount);
