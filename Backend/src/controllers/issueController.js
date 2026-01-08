@@ -478,3 +478,26 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 
 
+export const assignIssue = async (req, res) => {
+  const { teamMemberId } = req.body;
+
+  const issue = await Issue.findByIdAndUpdate(
+    req.params.id,
+    { assignedTo: teamMemberId, status: "Assigned" },
+    { new: true }
+  ).populate("assignedTo reportedBy");
+
+  await sendEmail({
+    to: issue.assignedTo.email,
+    subject: "New Issue Assigned",
+    html: `<p>You have been assigned issue: ${issue.title}</p>`,
+  });
+
+  await sendEmail({
+    to: issue.reportedBy.email,
+    subject: "Your Issue is Assigned",
+    html: `<p>Your issue is now being worked on.</p>`,
+  });
+
+  res.json(issue);
+};
