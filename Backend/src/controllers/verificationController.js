@@ -225,3 +225,26 @@ export const getUnverifiedIssuesInArea = asyncHandler(async (req, res) => {
     new ApiResponse(200, { issues }, 'Unverified issues retrieved')
   );
 });
+
+
+
+export const submitVerification = async (req, res) => {
+  const verification = await Verification.create(req.body);
+
+  const issue = await Issue.findById(verification.issue)
+    .populate("reportedBy official");
+
+  await sendEmail({
+    to: issue.official.email,
+    subject: "Verification Report Submitted",
+    html: `<p>Verification report submitted for issue ${issue.title}</p>`,
+  });
+
+  await sendEmail({
+    to: issue.reportedBy.email,
+    subject: "Verification Report Submitted",
+    html: `<p>Your issue is under verification.</p>`,
+  });
+
+  res.json(verification);
+};
