@@ -2,10 +2,12 @@ export const issueSubmittedTemplate = (issue) => ({
   subject: "Complaint Received",
   html: `
     <h2>Complaint Submitted</h2>
-    <p>Your complaint <b>${issue.title}</b> has been received.</p>
+    <p><b>ID:</b> ${issue._id}</p>
+    <p><b>Title:</b> ${issue.title}</p>
     <p>Status: Pending</p>
   `,
 });
+
 
 export const issueAssignedTemplate = (issue) => ({
   subject: "New Issue Assigned",

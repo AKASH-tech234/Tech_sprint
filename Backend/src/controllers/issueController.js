@@ -4,6 +4,8 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
 import { isOfficialAdmin } from '../utils/officialPermissions.js';
+import sendEmail from "../utils/sendemail.js";
+import { issueSubmittedTemplate } from "../utils/emailTemplates.js";
 
 // Helper function to extract public_id from Cloudinary URL
 const getPublicIdFromUrl = (url) => {
@@ -125,7 +127,24 @@ export const createIssue = asyncHandler(async (req, res) => {
   
   // Populate user details
   await issue.populate('reportedBy', 'username email avatar');
-  
+
+  // Send notification emails (best-effort)
+  (async () => {
+    try {
+      await sendEmail({
+        to: process.env.OFFICIAL_NOTIFICATION_EMAIL || 'official@gmail.com',
+        ...issueSubmittedTemplate(issue),
+      });
+
+      await sendEmail({
+        to: req.user.email,
+        ...issueSubmittedTemplate(issue),
+      });
+    } catch (err) {
+      console.error('Failed to send notification emails:', err);
+    }
+  })();
+
   res.status(201).json(
     new ApiResponse(201, issue, 'Issue created successfully')
   );
@@ -456,3 +475,6 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
   return R * c; // Distance in meters
 }
+
+
+
