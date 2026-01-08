@@ -524,3 +524,26 @@ export const markSolved = async (req, res) => {
 
   res.json(issue);
 };
+
+
+export const markResolved = async (req, res) => {
+  const issue = await Issue.findByIdAndUpdate(
+    req.params.id,
+    { status: "Resolved" },
+    { new: true }
+  ).populate("assignedTo reportedBy");
+
+  await sendEmail({
+    to: issue.assignedTo.email,
+    subject: "Issue Approved & Closed",
+    html: `<p>The solved issue has been approved.</p>`,
+  });
+
+  await sendEmail({
+    to: issue.reportedBy.email,
+    subject: "Complaint Resolved",
+    html: `<p>Your complaint has been successfully resolved.</p>`,
+  });
+
+  res.json(issue);
+};
