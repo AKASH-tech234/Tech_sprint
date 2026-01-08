@@ -10,7 +10,7 @@ Your CitizenVoice project now uses **OpenAI Vision API (GPT-4o)** instead of Gem
 
 ### Environment Variable Added
 ```env
-OPENAI_API_KEY=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
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
 ```
 
 **⚠️ SECURITY NOTE:** This key is now in your .env file. Never commit this to Git!
@@ -450,7 +450,7 @@ Everything is configured and working. Just:
 
 ### Environment Variable
 ```
-OPENAI_API_KEY=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
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
 ```
 
 ### Main API Endpoint
