@@ -501,3 +501,26 @@ export const assignIssue = async (req, res) => {
 
   res.json(issue);
 };
+
+
+export const markSolved = async (req, res) => {
+  const issue = await Issue.findByIdAndUpdate(
+    req.params.id,
+    { status: "Solved" },
+    { new: true }
+  ).populate("official reportedBy");
+
+  await sendEmail({
+    to: issue.official.email,
+    subject: "Issue Solved by Team",
+    html: `<p>Issue ${issue.title} has been solved.</p>`,
+  });
+
+  await sendEmail({
+    to: issue.reportedBy.email,
+    subject: "Issue Solved",
+    html: `<p>Your issue has been solved and awaits approval.</p>`,
+  });
+
+  res.json(issue);
+};
