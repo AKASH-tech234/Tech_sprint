@@ -259,7 +259,7 @@ export function SignUp() {
                 ))}
               </div>
             </div>
-//form
+
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
@@ -280,7 +280,7 @@ export function SignUp() {
                   />
                 </div>
               </div>
-//email
+
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
                   Email
