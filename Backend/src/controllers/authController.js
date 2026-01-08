@@ -189,7 +189,7 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
 
   // Recalculate profile completion status
   const isProfileComplete = user.checkProfileCompletion ? user.checkProfileCompletion() : false;
-
+//userData
   const userData = {
     id: user._id,
     username: user.username,
