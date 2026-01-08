@@ -9,6 +9,7 @@ Your CitizenVoice project now uses **OpenAI Vision API (GPT-4o)** instead of Gem
 ## 🔑 API Configuration
 
 ### Environment Variable Added
+
 ```env
 OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
 ```
@@ -20,10 +21,11 @@ OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
 ## 📦 Dependencies Updated
 
 ### Backend package.json
+
 ```json
 {
   "dependencies": {
-    "openai": "^4.77.3"  // ✨ NEW - Added OpenAI SDK
+    "openai": "^4.77.3" // ✨ NEW - Added OpenAI SDK
   }
 }
 ```
@@ -35,17 +37,21 @@ OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
 ## 🔄 Files Modified
 
 ### 1. `Backend/src/services/imageClassificationService.js`
+
 **Changed from:**
+
 - Google Gemini Vision API
 - `GoogleGenerativeAI` SDK
 - `gemini-1.5-flash` model
 
 **Changed to:**
-- OpenAI Vision API  
+
+- OpenAI Vision API
 - `openai` SDK
 - `gpt-4o` model
 
 **Why OpenAI GPT-4o?**
+
 - ✅ Better vision capabilities
 - ✅ More accurate classification
 - ✅ Faster response times
@@ -53,9 +59,11 @@ OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
 - ✅ Excellent for civic issue detection
 
 ### 2. `Backend/.env`
+
 Added OpenAI API key configuration
 
 ### 3. `Backend/package.json`
+
 Added OpenAI SDK dependency
 
 ---
@@ -63,6 +71,7 @@ Added OpenAI SDK dependency
 ## 🧪 Testing Your Setup
 
 ### Step 1: Verify Environment
+
 ```bash
 # Check if OpenAI key is set
 cd Backend
@@ -72,12 +81,14 @@ cat .env | grep OPENAI_API_KEY
 Should show: `OPENAI_API_KEY=sk-proj-...`
 
 ### Step 2: Start Backend
+
 ```bash
 cd Backend
 npm start
 ```
 
 You should see:
+
 ```
 ✅ MONGO Connected: cluster0.6ndbq5i.mongodb.net
 ✅ Server running on port 3000
@@ -86,6 +97,7 @@ You should see:
 ### Step 3: Test Classification API
 
 **Option A: Using PowerShell**
+
 ```powershell
 # Get your JWT token first (login to get token)
 $token = "YOUR_JWT_TOKEN_HERE"
@@ -102,6 +114,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/classification/test" `
 ```
 
 **Option B: Using Postman/Thunder Client**
+
 ```
 POST http://localhost:3000/api/classification/test
 
@@ -114,6 +127,7 @@ Body (form-data):
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -143,6 +157,7 @@ Body (form-data):
 ## 🎯 API Endpoints - All Working
 
 ### Classification Routes
+
 ```
 ✅ POST   /api/classification/classify     # Main classification endpoint
 ✅ GET    /api/classification/department/:category
@@ -150,6 +165,7 @@ Body (form-data):
 ```
 
 ### Other Routes (Verified)
+
 ```
 ✅ POST   /api/auth/login
 ✅ POST   /api/auth/signup
@@ -215,10 +231,12 @@ Body (form-data):
 ## 💰 OpenAI API Pricing
 
 ### GPT-4o Vision Costs
+
 - **Input:** $2.50 per 1M tokens
 - **Output:** $10.00 per 1M tokens
 
 ### For Civic Issue Classification:
+
 - **Per Image:** ~1000-1500 tokens (input) + 200 tokens (output)
 - **Cost per classification:** ~$0.003-0.005 (less than 1 cent!)
 - **1000 classifications:** ~$3-5
@@ -226,6 +244,7 @@ Body (form-data):
 **Very affordable!** 💰
 
 ### Free Tier:
+
 - New accounts get $5 free credits
 - ~1000-1500 free classifications
 - Perfect for testing and small deployments
@@ -234,14 +253,14 @@ Body (form-data):
 
 ## ⚡ Performance Comparison
 
-| Metric | Gemini Vision | OpenAI GPT-4o | Winner |
-|--------|--------------|---------------|--------|
-| **Response Time** | 2-4 seconds | 1-3 seconds | 🏆 GPT-4o |
-| **Accuracy** | 85-90% | 90-95% | 🏆 GPT-4o |
-| **JSON Parsing** | Sometimes needs cleanup | Clean JSON | 🏆 GPT-4o |
-| **Confidence Scores** | Good | Excellent | 🏆 GPT-4o |
-| **Cost** | Free (60/min) | $0.003/image | 🏆 Gemini (free) |
-| **Rate Limits** | 60 req/min | 500 req/min | 🏆 GPT-4o |
+| Metric                | Gemini Vision           | OpenAI GPT-4o | Winner           |
+| --------------------- | ----------------------- | ------------- | ---------------- |
+| **Response Time**     | 2-4 seconds             | 1-3 seconds   | 🏆 GPT-4o        |
+| **Accuracy**          | 85-90%                  | 90-95%        | 🏆 GPT-4o        |
+| **JSON Parsing**      | Sometimes needs cleanup | Clean JSON    | 🏆 GPT-4o        |
+| **Confidence Scores** | Good                    | Excellent     | 🏆 GPT-4o        |
+| **Cost**              | Free (60/min)           | $0.003/image  | 🏆 Gemini (free) |
+| **Rate Limits**       | 60 req/min              | 500 req/min   | 🏆 GPT-4o        |
 
 **Overall:** GPT-4o is better for production use!
 
@@ -257,6 +276,7 @@ Body (form-data):
 - [ ] ⚠️ Set spending limits in OpenAI account
 
 ### Verify .gitignore:
+
 ```bash
 cd Backend
 cat .gitignore | grep .env
@@ -271,14 +291,17 @@ Should show: `.env`
 Your `AIIssueForm.jsx` component already calls the correct endpoint:
 
 ```javascript
-const response = await fetch('http://localhost:3000/api/classification/classify', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${localStorage.getItem('token')}`
-  },
-  credentials: 'include',
-  body: formData
-});
+const response = await fetch(
+  "http://localhost:3000/api/classification/classify",
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    credentials: "include",
+    body: formData,
+  }
+);
 ```
 
 **No frontend changes needed!** ✅
@@ -288,23 +311,27 @@ const response = await fetch('http://localhost:3000/api/classification/classify'
 ## 🧪 Complete Test Workflow
 
 ### 1. Start Backend
+
 ```bash
 cd Backend
 npm start
 ```
 
 ### 2. Start Frontend
+
 ```bash
 cd CitizenVoice
 npm run dev
 ```
 
 ### 3. Login to App
+
 - Go to http://localhost:5173
 - Login with your credentials
 - Navigate to "Report Issue" page
 
 ### 4. Test AI Classification
+
 1. Enable "AI Auto-Classification" toggle
 2. Upload a test image (pothole, garbage, etc.)
 3. Wait 1-3 seconds for analysis
@@ -313,7 +340,9 @@ npm run dev
 6. Submit issue
 
 ### 5. Verify in Database
+
 Check MongoDB to see issue was created with:
+
 - Correct category (from AI or manual)
 - AI classification metadata (if enabled)
 - Confidence score stored
@@ -325,11 +354,13 @@ Check MongoDB to see issue was created with:
 ### Issue: "OpenAI API error"
 
 **Check:**
+
 1. API key is correct in .env
 2. API key has credits (check OpenAI dashboard)
 3. No rate limit exceeded (500/min for GPT-4o)
 
 **Fix:**
+
 ```bash
 # Verify key is loaded
 cd Backend
@@ -339,6 +370,7 @@ node -e "require('dotenv').config(); console.log('Key:', process.env.OPENAI_API_
 ### Issue: "Module not found: openai"
 
 **Fix:**
+
 ```bash
 cd Backend
 npm install openai
@@ -347,12 +379,14 @@ npm install openai
 ### Issue: Low confidence scores (<60%)
 
 **Reasons:**
+
 - Poor image quality
 - Unclear/blurry photo
 - Issue not clearly visible
 - Lighting problems
 
 **Solution:**
+
 - Use clearer images
 - Better lighting
 - Close-up of the issue
@@ -363,6 +397,7 @@ npm install openai
 **This is normal!** AI isn't perfect. That's why we have manual override.
 
 **Solution:**
+
 1. User sees low confidence
 2. User rejects AI suggestion
 3. User selects correct category manually
@@ -374,14 +409,17 @@ npm install openai
 ### Track These Metrics:
 
 1. **AI Usage Rate**
+
    - % of issues using AI vs manual
    - Track in your analytics
 
 2. **Confidence Distribution**
+
    - How many <60%, 60-80%, >80%?
    - Helps assess AI performance
 
 3. **Override Rate**
+
    - How often users reject AI?
    - High rate = AI needs improvement
 
@@ -390,6 +428,7 @@ npm install openai
    - Add feedback mechanism later
 
 ### Add to Issue Model (Optional):
+
 ```javascript
 // Backend/src/models/Issue.js
 userFeedback: {
@@ -404,6 +443,7 @@ userFeedback: {
 ## 🎯 What's Working Now
 
 ### Backend ✅
+
 - [x] OpenAI SDK installed
 - [x] API key configured in .env
 - [x] imageClassificationService updated
@@ -412,6 +452,7 @@ userFeedback: {
 - [x] JWT authentication working
 
 ### Frontend ✅
+
 - [x] AIIssueForm component ready
 - [x] ClassificationResults component ready
 - [x] API calls configured
@@ -419,12 +460,14 @@ userFeedback: {
 - [x] Error handling present
 
 ### API Endpoints ✅
+
 - [x] POST /api/classification/classify
 - [x] POST /api/classification/test
 - [x] GET /api/classification/department/:category
 - [x] POST /api/issues (with AI integration)
 
 ### Integration ✅
+
 - [x] Image upload → AI analysis
 - [x] Confidence scoring
 - [x] Priority suggestion
@@ -439,7 +482,7 @@ userFeedback: {
 Everything is configured and working. Just:
 
 1. **Start your servers** (Backend + Frontend)
-2. **Test with a real image** 
+2. **Test with a real image**
 3. **Watch OpenAI classify it!**
 
 **Total setup time:** Already done! Just start and test. ⚡
@@ -449,21 +492,25 @@ Everything is configured and working. Just:
 ## 📞 Quick Reference
 
 ### Environment Variable
+
 ```
 OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
 ```
 
 ### Main API Endpoint
+
 ```
 POST http://localhost:3000/api/classification/classify
 ```
 
 ### Test Endpoint
+
 ```
 POST http://localhost:3000/api/classification/test
 ```
 
 ### Model Used
+
 ```
 GPT-4o (gpt-4o)
 ```
