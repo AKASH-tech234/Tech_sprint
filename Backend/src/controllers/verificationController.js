@@ -248,3 +248,27 @@ export const submitVerification = async (req, res) => {
 
   res.json(verification);
 };
+
+
+
+export const approveVerification = async (req, res) => {
+  const verification = await Verification.findByIdAndUpdate(
+    req.params.id,
+    { status: "Approved" },
+    { new: true }
+  ).populate("issue teamMember");
+
+  await sendEmail({
+    to: verification.teamMember.email,
+    subject: "Verification Approved",
+    html: `<p>You may proceed further.</p>`,
+  });
+
+  await sendEmail({
+    to: verification.issue.reportedBy.email,
+    subject: "Issue Approved",
+    html: `<p>Your issue has been approved.</p>`,
+  });
+
+  res.json(verification);
+};
