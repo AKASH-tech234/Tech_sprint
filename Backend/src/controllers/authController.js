@@ -243,9 +243,10 @@ export const googleAuth = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Google credential is required");
   }
 
-  // Check valid role
+  // Normalize and validate role if provided (accept case-insensitive)
   const validRoles = ["citizen", "official", "community"];
-  if (!validRoles.includes(role)) {
+  const normalizedRole = role ? String(role).toLowerCase() : undefined;
+  if (normalizedRole && !validRoles.includes(normalizedRole)) {
     console.log("❌ [Backend] Invalid role:", role);
     throw new ApiError(400, "Invalid role selected");
   }
@@ -281,6 +282,16 @@ export const googleAuth = asyncHandler(async (req, res) => {
         // Link Google account to existing user
         user.googleId = googleId;
         user.avatar = user.avatar || picture;
+        // If frontend provided a role and it differs from existing, update it
+        if (normalizedRole && user.role !== normalizedRole) {
+          console.log(
+            "ℹ️ [Backend] Updating existing user's role:",
+            user._id,
+            "->",
+            normalizedRole
+          );
+          user.role = normalizedRole;
+        }
         await user.save();
       } else {
         console.log("📝 [Backend] Creating new user from Google account...");
@@ -300,7 +311,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
           username,
           email,
           googleId,
-          role,
+          role: normalizedRole || "citizen",
           avatar: picture,
           // For Google OAuth users, we set a random password
           password: await bcrypt.hash(
