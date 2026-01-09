@@ -132,7 +132,7 @@ export const createIssue = asyncHandler(async (req, res) => {
   (async () => {
     try {
       await sendEmail({
-        to: process.env.OFFICIAL_NOTIFICATION_EMAIL || 'official@gmail.com',
+        to:  process.env.OFFICIAL_ADMIN_EMAIL || 'official@gmail.com',
         ...issueSubmittedTemplate(issue),
       });
 
@@ -478,6 +478,31 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 
 
+// export const assignIssue = async (req, res) => {
+//   const { teamMemberId } = req.body;
+
+//   const issue = await Issue.findByIdAndUpdate(
+//     req.params.id,
+//     { assignedTo: teamMemberId, status: "Assigned" },
+//     { new: true }
+//   ).populate("assignedTo reportedBy");
+
+//   await sendEmail({
+//     to: issue.assignedTo.email,
+//     subject: "New Issue Assigned",
+//     html: `<p>You have been assigned issue: ${issue.title}</p>`,
+//   });
+
+//   await sendEmail({
+//     to: issue.reportedBy.email,
+//     subject: "Your Issue is Assigned",
+//     html: `<p>Your issue is now being worked on.</p>`,
+//   });
+
+//   res.json(issue);
+// };
+
+
 export const assignIssue = async (req, res) => {
   const { teamMemberId } = req.body;
 
@@ -487,20 +512,49 @@ export const assignIssue = async (req, res) => {
     { new: true }
   ).populate("assignedTo reportedBy");
 
-  await sendEmail({
-    to: issue.assignedTo.email,
-    subject: "New Issue Assigned",
-    html: `<p>You have been assigned issue: ${issue.title}</p>`,
-  });
+  if (issue.assignedTo?.email) {
+    await sendEmail({
+      to: issue.assignedTo.email,
+      subject: "New Issue Assigned",
+      html: `<p>You have been assigned issue: <b>${issue.title}</b></p>`,
+    });
+  }
 
-  await sendEmail({
-    to: issue.reportedBy.email,
-    subject: "Your Issue is Assigned",
-    html: `<p>Your issue is now being worked on.</p>`,
-  });
+  if (issue.reportedBy?.email) {
+    await sendEmail({
+      to: issue.reportedBy.email,
+      subject: "Your Issue is Assigned",
+      html: `<p>Your issue is now being worked on.</p>`,
+    });
+  }
 
   res.json(issue);
 };
+
+
+// export const markSolved = async (req, res) => {
+//   const issue = await Issue.findByIdAndUpdate(
+//     req.params.id,
+//     { status: "Solved" },
+//     { new: true }
+//   ).populate("official reportedBy");
+
+//   await sendEmail({
+//     to: issue.official.email,
+//     subject: "Issue Solved by Team",
+//     html: `<p>Issue ${issue.title} has been solved.</p>`,
+//   });
+
+//   await sendEmail({
+//     to: issue.reportedBy.email,
+//     subject: "Issue Solved",
+//     html: `<p>Your issue has been solved and awaits approval.</p>`,
+//   });
+
+//   res.json(issue);
+// };
+
+
 
 
 export const markSolved = async (req, res) => {
@@ -508,22 +562,52 @@ export const markSolved = async (req, res) => {
     req.params.id,
     { status: "Solved" },
     { new: true }
-  ).populate("official reportedBy");
+  ).populate("assignedTo reportedBy");
 
-  await sendEmail({
-    to: issue.official.email,
-    subject: "Issue Solved by Team",
-    html: `<p>Issue ${issue.title} has been solved.</p>`,
-  });
+  // Email to assigned team member (if exists)
+  if (issue.assignedTo?.email) {
+    await sendEmail({
+      to: issue.assignedTo.email,
+      subject: "Issue Solved by Team",
+      html: `<p>Issue <b>${issue.title}</b> has been marked as solved.</p>`,
+    });
+  }
 
-  await sendEmail({
-    to: issue.reportedBy.email,
-    subject: "Issue Solved",
-    html: `<p>Your issue has been solved and awaits approval.</p>`,
-  });
+  // Email to citizen
+  if (issue.reportedBy?.email) {
+    await sendEmail({
+      to: issue.reportedBy.email,
+      subject: "Issue Solved",
+      html: `<p>Your issue has been solved and is awaiting approval.</p>`,
+    });
+  }
 
   res.json(issue);
 };
+
+
+
+// export const markResolved = async (req, res) => {
+//   const issue = await Issue.findByIdAndUpdate(
+//     req.params.id,
+//     { status: "Resolved" },
+//     { new: true }
+//   ).populate("assignedTo reportedBy");
+
+//   await sendEmail({
+//     to: issue.assignedTo.email,
+//     subject: "Issue Approved & Closed",
+//     html: `<p>The solved issue has been approved.</p>`,
+//   });
+
+//   await sendEmail({
+//     to: issue.reportedBy.email,
+//     subject: "Complaint Resolved",
+//     html: `<p>Your complaint has been successfully resolved.</p>`,
+//   });
+
+//   res.json(issue);
+// };
 
 
 export const markResolved = async (req, res) => {
@@ -533,17 +617,21 @@ export const markResolved = async (req, res) => {
     { new: true }
   ).populate("assignedTo reportedBy");
 
-  await sendEmail({
-    to: issue.assignedTo.email,
-    subject: "Issue Approved & Closed",
-    html: `<p>The solved issue has been approved.</p>`,
-  });
+  if (issue.assignedTo?.email) {
+    await sendEmail({
+      to: issue.assignedTo.email,
+      subject: "Issue Approved & Closed",
+      html: `<p>The solved issue has been approved and closed.</p>`,
+    });
+  }
 
-  await sendEmail({
-    to: issue.reportedBy.email,
-    subject: "Complaint Resolved",
-    html: `<p>Your complaint has been successfully resolved.</p>`,
-  });
+  if (issue.reportedBy?.email) {
+    await sendEmail({
+      to: issue.reportedBy.email,
+      subject: "Complaint Resolved",
+      html: `<p>Your complaint has been successfully resolved.</p>`,
+    });
+  }
 
   res.json(issue);
 };
