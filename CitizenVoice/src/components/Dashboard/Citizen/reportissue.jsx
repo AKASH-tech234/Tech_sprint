@@ -219,15 +219,40 @@ export function ReportIssue({
     }
   };
 
-  // Accept AI classification suggestion
-  const handleAcceptClassification = () => {
-    if (classification) {
+  // State for generating details
+  const [generatingDetails, setGeneratingDetails] = useState(false);
+
+  // Accept AI classification suggestion - calls OpenAI to generate title & description
+  const handleAcceptClassification = async () => {
+    if (!classification) return;
+
+    setGeneratingDetails(true);
+
+    try {
+      // Call OpenAI to generate title and description
+      const details = await classificationService.generateIssueDetails(
+        classification
+      );
+      console.log("✅ Generated issue details:", details);
+
+      // Auto-fill the form with generated details
+      setFormData((prev) => ({
+        ...prev,
+        title: details.title || prev.title,
+        description: details.description || prev.description,
+        category: details.category || classification.category || prev.category,
+        priority: details.priority || classification.priority || prev.priority,
+      }));
+    } catch (err) {
+      console.error("❌ Failed to generate details:", err);
+      // Fallback: just use classification data without OpenAI
       setFormData((prev) => ({
         ...prev,
         category: classification.category,
         priority: classification.priority || prev.priority,
       }));
-      // Don't clear classification so user can see what was suggested
+    } finally {
+      setGeneratingDetails(false);
     }
   };
 
@@ -602,6 +627,7 @@ export function ReportIssue({
                     classification={classification}
                     onAccept={handleAcceptClassification}
                     onReject={handleRejectClassification}
+                    isGenerating={generatingDetails}
                   />
                 </div>
               )}

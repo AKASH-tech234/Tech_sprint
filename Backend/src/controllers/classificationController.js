@@ -1,4 +1,5 @@
 import { imageClassificationService } from "../services/imageClassificationService.js";
+import { generateIssueDetails } from "../services/openaiclass.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
@@ -181,5 +182,36 @@ export const classificationController = {
         timestamp: new Date(),
       },
     });
+  }),
+
+  /**
+   * Generate issue details using OpenAI based on classification
+   * POST /api/classification/generate-details
+   */
+  generateDetails: asyncHandler(async (req, res) => {
+    const { category, confidence, department, priority } = req.body;
+
+    if (!category) {
+      throw new ApiError(400, "Category is required");
+    }
+
+    const result = await generateIssueDetails({
+      category,
+      confidence: confidence || 0,
+      department: department || "General Municipal Department",
+      priority: priority || "medium",
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          result.data,
+          result.success
+            ? "Issue details generated successfully"
+            : "Issue details generated with fallback values"
+        )
+      );
   }),
 };

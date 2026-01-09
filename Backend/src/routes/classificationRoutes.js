@@ -30,6 +30,13 @@ router.post(
 // Get department for category
 router.get("/department/:category", classificationController.getDepartment);
 
+// Generate issue details using OpenAI based on classification
+router.post(
+  "/generate-details",
+  protect,
+  classificationController.generateDetails
+);
+
 // Test classification endpoint (for development)
 router.post(
   "/test",

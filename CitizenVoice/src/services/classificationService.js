@@ -139,6 +139,41 @@ class ClassificationService {
   }
 
   /**
+   * Generate issue details (title, description) using OpenAI based on classification
+   * @param {Object} classification - The ML classification result
+   * @returns {Promise<Object>} Generated title, description, category, priority
+   */
+  async generateIssueDetails(classification) {
+    const response = await fetch(
+      `${API_BASE_URL}/classification/generate-details`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          category: classification.category,
+          confidence: classification.confidence,
+          department: classification.department,
+          priority: classification.priority,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ message: "Failed to generate details" }));
+      throw new Error(error.message || "Failed to generate issue details");
+    }
+
+    const result = await response.json();
+    return result.data || result;
+  }
+
+  /**
    * Format classification result to a consistent structure
    * @param {Object} result - Raw classification result from API
    * @returns {Object} Formatted classification result

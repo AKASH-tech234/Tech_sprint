@@ -7,6 +7,7 @@ import {
   Info,
   Building2,
   Cpu,
+  Loader2,
 } from "lucide-react";
 
 /**
@@ -18,6 +19,7 @@ export default function ClassificationResults({
   classification,
   onAccept,
   onReject,
+  isGenerating = false,
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -244,14 +246,25 @@ export default function ClassificationResults({
       <div className="flex gap-3">
         <button
           onClick={onAccept}
-          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+          disabled={isGenerating}
+          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <CheckCircle2 size={18} />
-          Accept AI Suggestion
+          {isGenerating ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Generating Details...
+            </>
+          ) : (
+            <>
+              <CheckCircle2 size={18} />
+              Accept AI Suggestion
+            </>
+          )}
         </button>
         <button
           onClick={onReject}
-          className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+          disabled={isGenerating}
+          className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Choose Manually
         </button>
@@ -259,8 +272,9 @@ export default function ClassificationResults({
 
       {/* Info Footer */}
       <p className="text-xs text-gray-500 text-center">
-        AI classification uses advanced image analysis to categorize civic
-        issues
+        {isGenerating
+          ? "Using AI to generate title and description..."
+          : "AI classification uses advanced image analysis to categorize civic issues"}
       </p>
     </div>
   );
