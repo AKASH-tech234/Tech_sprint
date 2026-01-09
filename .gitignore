@@ -25,6 +25,10 @@ node_modules/
 Backend/node_modules/
 CitizenVoice/node_modules/
 
+# Build outputs
+dist/
+CitizenVoice/dist/
+
 # Uploads
 uploads/
 Backend/uploads/
