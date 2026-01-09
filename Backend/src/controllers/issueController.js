@@ -128,22 +128,24 @@ export const createIssue = asyncHandler(async (req, res) => {
   // Populate user details
   await issue.populate('reportedBy', 'username email avatar');
 
-  // Send notification emails (best-effort)
-  (async () => {
-    try {
-      await sendEmail({
-        to:  process.env.OFFICIAL_ADMIN_EMAIL || 'official@gmail.com',
-        ...issueSubmittedTemplate(issue),
-      });
+  // Send notification emails (best-effort, non-blocking)
+  console.log('📧 [CreateIssue] Sending notification emails...');
+  
+  // Email to admin (official role)
+  sendEmail({
+    to: process.env.OFFICIAL_ADMIN_EMAIL || 'official@gmail.com',
+    ...issueSubmittedTemplate(issue, { role: 'official', username: 'Admin' }),
+  })
+    .then(() => console.log('✅ [CreateIssue] Admin notification email sent'))
+    .catch((err) => console.error('❌ [CreateIssue] Failed to send admin email:', err.message));
 
-      await sendEmail({
-        to: req.user.email,
-        ...issueSubmittedTemplate(issue),
-      });
-    } catch (err) {
-      console.error('Failed to send notification emails:', err);
-    }
-  })();
+  // Email to citizen (reporter)
+  sendEmail({
+    to: req.user.email,
+    ...issueSubmittedTemplate(issue, req.user),
+  })
+    .then(() => console.log('✅ [CreateIssue] Citizen notification email sent to:', req.user.email))
+    .catch((err) => console.error('❌ [CreateIssue] Failed to send citizen email:', err.message));
 
   res.status(201).json(
     new ApiResponse(201, issue, 'Issue created successfully')
