@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // import dotenv from "dotenv";
 // import path from "path";
 // import { fileURLToPath } from "url";
@@ -11,9 +10,6 @@
 
 
 
-=======
-// //when using google authentication make sure to put client ID in frontend and backend
->>>>>>> a79b25d (custom model done)
 // import express from "express";
 // import cors from "cors";
 // import mongoose from "mongoose";
@@ -43,8 +39,6 @@
 // import multer from "multer";
 // import fs from "fs";
 
-<<<<<<< HEAD
-=======
 // import http from "http";
 // import { Server } from "socket.io";
 
@@ -360,7 +354,6 @@
 // // start();
 
 // when using google authentication make sure to put client ID in frontend and backend
->>>>>>> a79b25d (custom model done)
 
 import express from "express";
 import cors from "cors";
@@ -520,11 +513,8 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/verification", verificationRoutes);
 app.use("/api/notifications", notificationRoutes);
-<<<<<<< HEAD
 app.use("/api/community", communityRoutes);
-=======
 app.use("/api/classification", classificationRoutes);
->>>>>>> a79b25d (custom model done)
 
 // Make io accessible in controllers
 app.set("io", io);
