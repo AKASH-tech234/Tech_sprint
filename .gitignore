@@ -1,6 +1,8 @@
 # Environment variables - SENSITIVE
 .env
+.env.*
 .env.local
+.env.*.local
 .env.production
 Backend/.env
 CitizenVoice/.env
@@ -9,6 +11,14 @@ CitizenVoice/.env
 !.env.example
 !Backend/.env.example
 !CitizenVoice/.env.example
+
+# Common secret key/cert files
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
 
 # Node dependencies
 node_modules/

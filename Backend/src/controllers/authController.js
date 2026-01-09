@@ -1,12 +1,15 @@
 // Backend/src/controllers/authController.js
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { User } from "../models/userModel.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 import { isOfficialAdmin } from "../utils/officialPermissions.js";
+import sendEmail from "../utils/sendemail.js";
+import { passwordResetTemplate, passwordResetSuccessTemplate } from "../utils/emailTemplates.js";
 
 // Initialize Google OAuth client lazily (after dotenv loads)
 let googleClient = null;
@@ -387,4 +390,148 @@ export const checkAuth = asyncHandler(async (req, res) => {
       new ApiResponse(200, { authenticated: false }, "Not authenticated")
     );
   }
+});
+
+// @desc    Request password reset (Forgot Password)
+// @route   POST /api/auth/forgot-password
+// @access  Public
+export const forgotPassword = asyncHandler(async (req, res) => {
+  console.log("🔑 [Backend] Forgot password request received");
+  const { email } = req.body;
+
+  if (!email) {
+    throw new ApiError(400, "Email is required");
+  }
+
+  // Always respond with success to prevent account enumeration
+  const genericMessage = "If an account with that email exists, a password reset link has been sent.";
+
+  try {
+    // Find user by email (case-insensitive)
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    // If no user found OR user is inactive, still return success (security)
+    if (!user || !user.isActive) {
+      console.log("⚠️ [Backend] No active user found for email:", email);
+      return res.json(new ApiResponse(200, null, genericMessage));
+    }
+
+    // Generate random reset token (32 bytes = 64 hex chars)
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    // Hash the token before storing (never store raw token)
+    const resetTokenHash = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    // Set token expiry (15 minutes from now)
+    const tokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+    // Update user with reset token data
+    user.passwordResetTokenHash = resetTokenHash;
+    user.passwordResetTokenExpiresAt = tokenExpiry;
+    user.passwordResetRequestedAt = new Date();
+    await user.save();
+
+    console.log("🔐 [Backend] Reset token generated for user:", user._id);
+
+    // Build reset URL
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const resetUrl = `${clientUrl}/reset-password?token=${resetToken}`;
+
+    // Send password reset email
+    const emailTemplate = passwordResetTemplate(resetUrl, user.username);
+    
+    await sendEmail({
+      to: user.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+
+    console.log("📧 [Backend] Password reset email sent to:", user.email);
+    res.json(new ApiResponse(200, null, genericMessage));
+
+  } catch (error) {
+    console.error("❌ [Backend] Forgot password error:", error.message);
+    // Still return generic message on error (security)
+    res.json(new ApiResponse(200, null, genericMessage));
+  }
+});
+
+// @desc    Reset password with token
+// @route   POST /api/auth/reset-password
+// @access  Public
+export const resetPassword = asyncHandler(async (req, res) => {
+  console.log("🔑 [Backend] Reset password request received");
+  const { token, newPassword } = req.body;
+
+  // Validate inputs
+  if (!token) {
+    throw new ApiError(400, "Reset token is required");
+  }
+
+  if (!newPassword) {
+    throw new ApiError(400, "New password is required");
+  }
+
+  // Validate password length
+  if (newPassword.length < 8) {
+    throw new ApiError(400, "Password must be at least 8 characters long");
+  }
+
+  // Basic password strength check (at least one letter and one number)
+  const hasLetter = /[a-zA-Z]/.test(newPassword);
+  const hasNumber = /[0-9]/.test(newPassword);
+  if (!hasLetter || !hasNumber) {
+    throw new ApiError(400, "Password must contain at least one letter and one number");
+  }
+
+  // Hash the incoming token to compare with stored hash
+  const tokenHash = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  // Find user with matching token hash and non-expired token
+  const user = await User.findOne({
+    passwordResetTokenHash: tokenHash,
+    passwordResetTokenExpiresAt: { $gt: new Date() },
+  }).select("+password");
+
+  if (!user) {
+    console.log("❌ [Backend] Invalid or expired reset token");
+    throw new ApiError(400, "Invalid or expired reset token. Please request a new password reset.");
+  }
+
+  console.log("✅ [Backend] Valid reset token for user:", user._id);
+
+  // Hash the new password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+  // Update user: set new password and clear reset token fields
+  user.password = hashedPassword;
+  user.passwordResetTokenHash = null;
+  user.passwordResetTokenExpiresAt = null;
+  user.passwordResetRequestedAt = null;
+  await user.save();
+
+  console.log("✅ [Backend] Password reset successful for user:", user._id);
+
+  // Send confirmation email
+  try {
+    const emailTemplate = passwordResetSuccessTemplate(user.username);
+    await sendEmail({
+      to: user.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+    console.log("📧 [Backend] Password reset confirmation email sent to:", user.email);
+  } catch (emailError) {
+    // Don't fail the reset if confirmation email fails
+    console.error("⚠️ [Backend] Failed to send confirmation email:", emailError.message);
+  }
+
+  res.json(new ApiResponse(200, null, "Password has been reset successfully. You can now log in with your new password."));
 });

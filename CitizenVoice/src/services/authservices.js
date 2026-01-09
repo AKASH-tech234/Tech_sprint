@@ -116,6 +116,22 @@ class AuthService {
       console.error("❌ [AuthService] Logout error:", error);
     }
   }
+
+  // Request password reset (Forgot Password)
+  async forgotPassword(email) {
+    console.log("🔑 [AuthService] Forgot password request for:", email);
+    const { data } = await api.post("/forgot-password", { email });
+    console.log("✅ [AuthService] Forgot password response:", data.message);
+    return data;
+  }
+
+  // Reset password with token
+  async resetPassword(token, newPassword) {
+    console.log("🔑 [AuthService] Reset password request");
+    const { data } = await api.post("/reset-password", { token, newPassword });
+    console.log("✅ [AuthService] Reset password response:", data.message);
+    return data;
+  }
 }
 
 export const authService = new AuthService();

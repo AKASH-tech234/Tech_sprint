@@ -7,7 +7,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/projectedroute";
-import { Landing, SignUp, Login } from "./pages";
+import { Landing, SignUp, Login, ForgotPassword, ResetPassword } from "./pages";
 import Profile from "./pages/Profile";
 
 // Dashboard imports
@@ -24,6 +24,8 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Profile Route - Protected for all authenticated users */}
           <Route

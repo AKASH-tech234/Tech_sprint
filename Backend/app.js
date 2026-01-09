@@ -244,27 +244,53 @@ app.use((err, req, res, next) => {
 
 // -------------------- Server --------------------
 const start = async () => {
-  try {
-    const connectionDb = await mongoose.connect(process.env.MONGO_URI);
-    console.log(` MONGO Connected: ${connectionDb.connection.host}`);
+  const PORT = process.env.PORT || 3000;
+  const NODE_ENV = process.env.NODE_ENV || "development";
 
-    const PORT = process.env.PORT || 3000;
+  try {
+    // Connect to MongoDB
+    const connectionDb = await mongoose.connect(process.env.MONGO_URI);
+    console.log(`✅ MONGO Connected: ${connectionDb.connection.host}`);
+
+    // Start server with EADDRINUSE handling
     server.listen(PORT, () => {
-      console.log(` Server running on port ${PORT}`);
+      console.log("\n🚀 ========== SERVER STARTED ==========");
+      console.log(`   PORT: ${PORT}`);
+      console.log(`   ENV:  ${NODE_ENV}`);
+      console.log(`   URL:  http://localhost:${PORT}`);
+      console.log("=======================================\n");
     });
+
+    // Handle port already in use error
+    server.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        console.error(`\n❌ ERROR: Port ${PORT} is already in use!`);
+        console.error("   Solutions:");
+        console.error(`   1. Kill the process using port ${PORT}:`);
+        console.error(`      - Windows: netstat -ano | findstr :${PORT}`);
+        console.error(`      - Then: taskkill /PID <PID> /F`);
+        console.error(`   2. Or change PORT in .env file`);
+        console.error(`   3. Or set a different port: PORT=3001 npm run dev\n`);
+        process.exit(1);
+      } else {
+        console.error("❌ Server error:", err);
+        process.exit(1);
+      }
+    });
+
   } catch (err) {
-    console.error(" Failed to connect to MongoDB", err);
+    console.error("❌ Failed to connect to MongoDB:", err.message);
     process.exit(1);
   }
 };
 
 // Process safety
 process.on("unhandledRejection", (reason) => {
-  console.error(" Unhandled Rejection:", reason);
+  console.error("❌ Unhandled Rejection:", reason);
 });
 
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+  console.error("❌ Uncaught Exception:", error);
 });
 
 
