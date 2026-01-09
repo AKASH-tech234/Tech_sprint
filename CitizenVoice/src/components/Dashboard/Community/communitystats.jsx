@@ -120,116 +120,172 @@ export function CommunityStats() {
   const [overviewStats, setOverviewStats] = useState([]);
   const [categoryBreakdown, setCategoryBreakdown] = useState([]);
   const [monthlyTrend, setMonthlyTrend] = useState([]);
+  const [leaderboard, setLeaderboard] = useState(mockLeaderboard);
 
   useEffect(() => {
     fetchStats();
   }, [timeRange]);
 
+  const computeStatsFromIssues = (issues) => {
+    const totalIssues = issues.length;
+    const resolvedIssues = issues.filter(i => i.status === 'resolved').length;
+    const activeIssues = issues.filter(i => ['reported', 'acknowledged', 'in-progress'].includes(i.status)).length;
+    const resolutionRate = totalIssues > 0 ? Math.round((resolvedIssues / totalIssues) * 100) : 0;
+
+    const resolvedWithTime = issues.filter(i => i.status === 'resolved' && i.updatedAt && i.createdAt);
+    const avgResolutionTime = resolvedWithTime.length > 0
+      ? (resolvedWithTime.reduce((acc, issue) => {
+          const created = new Date(issue.createdAt);
+          const resolved = new Date(issue.updatedAt);
+          return acc + (resolved - created) / (1000 * 60 * 60 * 24);
+        }, 0) / resolvedWithTime.length).toFixed(1)
+      : "N/A";
+
+    setOverviewStats([
+      {
+        title: "Total Area Issues",
+        value: totalIssues.toString(),
+        change: `+${activeIssues}`,
+        trend: "up",
+        period: "active",
+        icon: FileText,
+        color: "rose",
+      },
+      {
+        title: "Resolution Rate",
+        value: `${resolutionRate}%`,
+        change: `${resolvedIssues} resolved`,
+        trend: "up",
+        period: "",
+        icon: CheckCircle2,
+        color: "emerald",
+      },
+      {
+        title: "Active Issues",
+        value: activeIssues.toString(),
+        change: "needs attention",
+        trend: activeIssues > 10 ? "down" : "up",
+        period: "",
+        icon: Users,
+        color: "violet",
+      },
+      {
+        title: "Avg. Resolution Time",
+        value: avgResolutionTime !== "N/A" ? `${avgResolutionTime} days` : "N/A",
+        change: "",
+        trend: "up",
+        period: "",
+        icon: Clock,
+        color: "cyan",
+      },
+    ]);
+
+    const categoryCounts = {};
+    issues.forEach(issue => {
+      const cat = issue.category || 'other';
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    });
+
+    const categoryData = Object.entries(categoryCounts)
+      .map(([category, count]) => ({
+        category: category.charAt(0).toUpperCase() + category.slice(1),
+        count,
+        percentage: Math.round((count / totalIssues) * 100),
+        trend: "stable"
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    setCategoryBreakdown(categoryData);
+
+    const monthlyData = {};
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    issues.forEach(issue => {
+      const date = new Date(issue.createdAt);
+      const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { month: months[date.getMonth()], reported: 0, resolved: 0 };
+      }
+      monthlyData[monthKey].reported++;
+      if (issue.status === 'resolved') {
+        monthlyData[monthKey].resolved++;
+      }
+    });
+
+    const trendData = Object.values(monthlyData)
+      .sort((a, b) => months.indexOf(a.month) - months.indexOf(b.month))
+      .slice(-6);
+
+    setMonthlyTrend(trendData.length > 0 ? trendData : [
+      { month: 'N/A', reported: 0, resolved: 0 }
+    ]);
+  };
+
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const response = await issueService.getIssues({ limit: 500 });
-      const issues = response?.data?.issues || [];
-
-      // Calculate overview stats
-      const totalIssues = issues.length;
-      const resolvedIssues = issues.filter(i => i.status === 'resolved').length;
-      const activeIssues = issues.filter(i => ['reported', 'acknowledged', 'in-progress'].includes(i.status)).length;
-      const resolutionRate = totalIssues > 0 ? Math.round((resolvedIssues / totalIssues) * 100) : 0;
-
-      // Calculate average resolution time (in days)
-      const resolvedWithTime = issues.filter(i => i.status === 'resolved' && i.updatedAt && i.createdAt);
-      const avgResolutionTime = resolvedWithTime.length > 0
-        ? (resolvedWithTime.reduce((acc, issue) => {
-            const created = new Date(issue.createdAt);
-            const resolved = new Date(issue.updatedAt);
-            return acc + (resolved - created) / (1000 * 60 * 60 * 24);
-          }, 0) / resolvedWithTime.length).toFixed(1)
-        : "N/A";
-
-      setOverviewStats([
-        {
-          title: "Total Area Issues",
-          value: totalIssues.toString(),
-          change: `+${activeIssues}`,
-          trend: "up",
-          period: "active",
-          icon: FileText,
-          color: "rose",
-        },
-        {
-          title: "Resolution Rate",
-          value: `${resolutionRate}%`,
-          change: `${resolvedIssues} resolved`,
-          trend: "up",
-          period: "",
-          icon: CheckCircle2,
-          color: "emerald",
-        },
-        {
-          title: "Active Issues",
-          value: activeIssues.toString(),
-          change: "needs attention",
-          trend: activeIssues > 10 ? "down" : "up",
-          period: "",
-          icon: Users,
-          color: "violet",
-        },
-        {
-          title: "Avg. Resolution Time",
-          value: avgResolutionTime !== "N/A" ? `${avgResolutionTime} days` : "N/A",
-          change: "",
-          trend: "up",
-          period: "",
-          icon: Clock,
-          color: "cyan",
-        },
+      // Fetch both community stats and leaderboard in parallel
+      const [statsRes, leaderboardRes] = await Promise.all([
+        issueService.getCommunityStats(),
+        issueService.getCommunityLeaderboard(10)
       ]);
 
-      // Calculate category breakdown
-      const categoryCounts = {};
-      issues.forEach(issue => {
-        const cat = issue.category || 'other';
-        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-      });
+      const statsPayload = statsRes?.data || statsRes || {};
+      const leaderboardPayload = leaderboardRes?.data || leaderboardRes || {};
 
-      const categoryData = Object.entries(categoryCounts)
-        .map(([category, count]) => ({
-          category: category.charAt(0).toUpperCase() + category.slice(1),
-          count,
-          percentage: Math.round((count / totalIssues) * 100),
+      // Process overview stats
+      if (statsPayload.overviewStats && !Array.isArray(statsPayload.overviewStats) && typeof statsPayload.overviewStats === 'object') {
+        const o = statsPayload.overviewStats;
+        const totalIssues = o.totalIssues ?? 0;
+        const resolved = o.resolved ?? 0;
+        const active = (o.reported ?? 0) + (o.acknowledged ?? 0) + (o.inProgress ?? 0);
+        const resolutionRate = totalIssues > 0 ? Math.round((resolved / totalIssues) * 100) : 0;
+
+        setOverviewStats([
+          { title: 'Total Area Issues', value: totalIssues.toString(), change: `+${active}`, trend: 'up', period: 'active', icon: FileText, color: 'rose' },
+          { title: 'Resolution Rate', value: `${resolutionRate}%`, change: `${resolved} resolved`, trend: 'up', period: '', icon: CheckCircle2, color: 'emerald' },
+          { title: 'Active Issues', value: active.toString(), change: 'needs attention', trend: active > 10 ? 'down' : 'up', period: '', icon: Users, color: 'violet' },
+          { title: 'Avg. Resolution Time', value: 'N/A', change: '', trend: 'up', period: '', icon: Clock, color: 'cyan' }
+        ]);
+      } else if (Array.isArray(statsPayload.overviewStats)) {
+        setOverviewStats(statsPayload.overviewStats);
+      }
+
+      // Process category breakdown
+      if (Array.isArray(statsPayload.categoryBreakdown) && statsPayload.categoryBreakdown.length > 0) {
+        const totalCount = statsPayload.categoryBreakdown.reduce((sum, cat) => sum + (cat.count || 0), 0);
+        const categoryData = statsPayload.categoryBreakdown.map(cat => ({
+          category: cat.category.charAt(0).toUpperCase() + cat.category.slice(1),
+          count: cat.count || 0,
+          percentage: totalCount > 0 ? Math.round((cat.count / totalCount) * 100) : 0,
           trend: "stable"
-        }))
-        .sort((a, b) => b.count - a.count);
+        }));
+        setCategoryBreakdown(categoryData);
+      }
 
-      setCategoryBreakdown(categoryData);
+      // Process monthly trend
+      if (Array.isArray(statsPayload.monthlyTrend) && statsPayload.monthlyTrend.length > 0) {
+        setMonthlyTrend(statsPayload.monthlyTrend);
+      }
 
-      // Calculate monthly trend (last 6 months)
-      const monthlyData = {};
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      
-      issues.forEach(issue => {
-        const date = new Date(issue.createdAt);
-        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-        if (!monthlyData[monthKey]) {
-          monthlyData[monthKey] = { month: months[date.getMonth()], reported: 0, resolved: 0 };
-        }
-        monthlyData[monthKey].reported++;
-        if (issue.status === 'resolved') {
-          monthlyData[monthKey].resolved++;
-        }
-      });
-
-      const trendData = Object.values(monthlyData)
-        .sort((a, b) => months.indexOf(a.month) - months.indexOf(b.month))
-        .slice(-6);
-
-      setMonthlyTrend(trendData.length > 0 ? trendData : [
-        { month: 'N/A', reported: 0, resolved: 0 }
-      ]);
+      // Process leaderboard
+      if (leaderboardPayload.leaderboard && Array.isArray(leaderboardPayload.leaderboard)) {
+        setLeaderboard(leaderboardPayload.leaderboard);
+      } else if (Array.isArray(leaderboardPayload)) {
+        setLeaderboard(leaderboardPayload);
+      }
 
     } catch (err) {
-      console.error("Error fetching stats:", err);
+      console.error("Error fetching community stats:", err);
+      // Fallback: fetch issues and compute stats client-side
+      try {
+        const response = await issueService.getIssues({ limit: 500 });
+        const issues = response?.data?.issues || response?.issues || [];
+        if (issues.length > 0) {
+          computeStatsFromIssues(issues);
+        }
+      } catch (err2) {
+        console.error("Fallback failed to fetch issues:", err2);
+      }
     } finally {
       setLoading(false);
     }
@@ -434,31 +490,31 @@ export function CommunityStats() {
             Community Leaderboard
           </h3>
           <div className="space-y-3">
-            {mockLeaderboard.map((user) => (
-              <div
-                key={user.rank}
-                className={cn(
-                  "flex items-center justify-between rounded-lg p-3",
-                  user.rank <= 3 ? "bg-white/10" : "bg-white/5"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{user.badge}</span>
-                  <div>
-                    <p className="font-medium text-white">{user.name}</p>
-                    <p className="text-xs text-white/40">
-                      {user.verifications} verifications
-                    </p>
+              {leaderboard.map((user, index) => (
+                <div
+                  key={user.id || user._id || user.rank || index}
+                  className={cn(
+                    "flex items-center justify-between rounded-lg p-3",
+                    index < 3 ? "bg-white/10" : "bg-white/5"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{user.badge || (index === 0 ? '🏆' : index === 1 ? '🥈' : index === 2 ? '🥉' : '⭐')}</span>
+                    <div>
+                      <p className="font-medium text-white">{user.name || user.username || user.displayName || 'User'}</p>
+                      <p className="text-xs text-white/40">
+                        {user.verifications ?? user.verificationCount ?? 0} verifications
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 text-amber-400" />
+                    <span className="font-semibold text-amber-400">
+                      {(user.points ?? user.score ?? 0).toLocaleString()}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-amber-400" />
-                  <span className="font-semibold text-amber-400">
-                    {user.points.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
           <button className="mt-4 w-full rounded-lg border border-white/10 py-2 text-sm text-white/60 hover:bg-white/5">
             View Full Leaderboard

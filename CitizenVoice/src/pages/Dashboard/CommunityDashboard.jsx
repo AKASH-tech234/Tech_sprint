@@ -415,9 +415,13 @@ function DashboardHome() {
       </div>
 
       {/* Area Heatmap Placeholder */}
+      {/* District-Based Heatmap Preview */}
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white">Area Heatmap</h3>
+          <div>
+            <h3 className="text-lg font-semibold text-white">District Heatmap</h3>
+            <p className="text-xs text-white/40">Issue density in your district</p>
+          </div>
           <button
             onClick={() => navigate("/dashboard/community/map")}
             className="flex items-center gap-1 text-sm text-rose-400 hover:text-rose-300"
@@ -426,13 +430,27 @@ function DashboardHome() {
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-white/20">
-          <div className="text-center">
-            <MapPin className="mx-auto mb-2 h-12 w-12 text-white/20" />
-            <p className="text-white/40">Interactive heatmap coming soon</p>
-            <p className="text-sm text-white/20">
-              Shows issue density across neighborhoods
-            </p>
+        <div className="h-64 rounded-lg overflow-hidden border border-white/10">
+          <HeatmapViewer 
+            userRole="community" 
+            defaultCenter={[28.6139, 77.2090]}
+            defaultZoom={12}
+            height="256px"
+            showControls={false}
+          />
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="rounded-lg bg-rose-500/10 p-3 text-center border border-rose-500/20">
+            <p className="text-xs text-rose-400">High Priority</p>
+            <p className="text-2xl font-bold text-rose-400">{recentIssues.filter(i => i.priority === 'high').length}</p>
+          </div>
+          <div className="rounded-lg bg-amber-500/10 p-3 text-center border border-amber-500/20">
+            <p className="text-xs text-amber-400">Medium Priority</p>
+            <p className="text-2xl font-bold text-amber-400">{recentIssues.filter(i => i.priority === 'medium').length}</p>
+          </div>
+          <div className="rounded-lg bg-emerald-500/10 p-3 text-center border border-emerald-500/20">
+            <p className="text-xs text-emerald-400">Low Priority</p>
+            <p className="text-2xl font-bold text-emerald-400">{recentIssues.filter(i => i.priority === 'low').length}</p>
           </div>
         </div>
       </div>
@@ -442,25 +460,16 @@ function DashboardHome() {
 
 // Map placeholder
 function MapPage() {
+  const CommunityHeatmap = React.lazy(() => import("../../components/Dashboard/Community/CommunityHeatmap"));
+  
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">
-            Community Issues Heatmap
-          </h1>
-          <p className="text-sm text-white/60">
-            Track and monitor issues across your community
-          </p>
-        </div>
+    <React.Suspense fallback={
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
       </div>
-      <HeatmapViewer 
-        userRole="community" 
-        defaultCenter={[28.6139, 77.2090]}
-        defaultZoom={12}
-        height="calc(100vh - 250px)"
-      />
-    </div>
+    }>
+      <CommunityHeatmap />
+    </React.Suspense>
   );
 }
 
