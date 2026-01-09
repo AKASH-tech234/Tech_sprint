@@ -80,6 +80,11 @@ const menuConfig = {
       path: "/dashboard/community/verify",
     },
     {
+      icon: MessageSquare,
+      label: "Community Chat",
+      path: "/dashboard/community/chat",
+    },
+    {
       icon: TrendingUp,
       label: "Community Stats",
       path: "/dashboard/community/stats",

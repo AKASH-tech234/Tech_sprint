@@ -22,7 +22,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-export function VerificationQueue() {
+export function VerificationQueue({ districtId }) {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const [issues, setIssues] = useState([]);
@@ -62,13 +62,13 @@ export function VerificationQueue() {
     if (!checkingProfile && isProfileComplete) {
       loadIssues();
     }
-  }, [checkingProfile, isProfileComplete]);
+  }, [checkingProfile, isProfileComplete, districtId]);
 
   const loadIssues = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await verificationService.getUnverifiedIssues();
+      const response = await verificationService.getUnverifiedIssues(districtId);
       setIssues(response.data?.issues || []);
     } catch (err) {
       console.error("Error loading issues:", err);

@@ -1,7 +1,7 @@
 // src/components/Dashboard/Community/AreaIssues.jsx
 import React, { useState, useEffect } from "react";
 import { cn } from "../../../lib/utils";
-import { issueService } from "../../../services/issueService";
+import { districtService, parseDistrictId } from "../../../services/districtService";
 import { IssueDetailModal } from "./IssueDetailModal";
 import {
   Search,
@@ -43,20 +43,7 @@ const categoryIcons = {
   other: "📋",
 };
 
-// Indian states for filtering
-const indianStates = [
-  { value: "all", label: "All States" },
-  { value: "Andhra Pradesh", label: "Andhra Pradesh" },
-  { value: "Delhi", label: "Delhi" },
-  { value: "Karnataka", label: "Karnataka" },
-  { value: "Maharashtra", label: "Maharashtra" },
-  { value: "Tamil Nadu", label: "Tamil Nadu" },
-  { value: "Uttar Pradesh", label: "Uttar Pradesh" },
-  { value: "West Bengal", label: "West Bengal" },
-  // Add more states as needed
-];
-
-export function AreaIssues({ onViewIssue }) {
+export function AreaIssues({ districtId, onViewIssue }) {
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,31 +51,31 @@ export function AreaIssues({ onViewIssue }) {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [filters, setFilters] = useState({
-    state: "all",
-    district: "",
     category: "all",
     status: "all",
   });
 
-  // Fetch issues on mount and when filters change
+  // Parse district info
+  const districtInfo = parseDistrictId(districtId);
+
+  // Fetch issues on mount and when districtId/filters change
   useEffect(() => {
-    fetchIssues();
-  }, [filters]);
+    if (districtId) {
+      fetchIssues();
+    } else {
+      setIssues([]);
+      setLoading(false);
+    }
+  }, [districtId, filters]);
 
   const fetchIssues = async () => {
     setLoading(true);
     try {
-      // Build query params with filters
-      const params = {
+      const response = await districtService.getDistrictIssues(districtId, {
+        ...filters,
         limit: 100,
-        ...(filters.state !== "all" && { state: filters.state }),
-        ...(filters.district && { district: filters.district }),
-        ...(filters.category !== "all" && { category: filters.category }),
-        ...(filters.status !== "all" && { status: filters.status }),
-      };
-      
-      const response = await issueService.getAllIssues(params);
-      const fetchedIssues = response?.data?.issues || [];
+      });
+      const fetchedIssues = response?.issues || [];
       
       // Transform issues to match expected format
       const transformedIssues = fetchedIssues.map(issue => ({
@@ -157,6 +144,27 @@ export function AreaIssues({ onViewIssue }) {
     setSelectedIssue(transformedUpdate);
   };
 
+  // No district selected state
+  if (!districtId) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Area Issues</h2>
+          <p className="text-sm text-white/60">
+            Browse and engage with issues in your district
+          </p>
+        </div>
+        <div className="flex flex-col items-center justify-center h-64 rounded-xl border border-white/10 bg-white/5 p-8">
+          <MapPin className="h-12 w-12 text-white/40 mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">Select a District</h3>
+          <p className="text-white/60 text-center">
+            Choose a district from the dropdown above to view local issues.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -173,7 +181,9 @@ export function AreaIssues({ onViewIssue }) {
         <div>
           <h2 className="text-2xl font-bold text-white">Area Issues</h2>
           <p className="text-sm text-white/60">
-            {filteredIssues.length} issues in your area
+            {districtId 
+              ? `${filteredIssues.length} issues in ${districtInfo.district}, ${districtInfo.state}`
+              : 'Select a district to view issues'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -181,6 +191,7 @@ export function AreaIssues({ onViewIssue }) {
             onClick={fetchIssues}
             className="rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white"
             title="Refresh"
+            disabled={!districtId}
           >
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -232,38 +243,6 @@ export function AreaIssues({ onViewIssue }) {
       {/* Filters */}
       {showFilters && (
         <div className="flex flex-wrap gap-4 rounded-lg border border-white/10 bg-white/5 p-4">
-          <div>
-            <label className="mb-1 block text-xs text-white/60">
-              State
-            </label>
-            <select
-              value={filters.state}
-              onChange={(e) =>
-                setFilters({ ...filters, state: e.target.value, district: "" })
-              }
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
-            >
-              {indianStates.map((s) => (
-                <option key={s.value} value={s.value} className="bg-black">
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-white/60">
-              District
-            </label>
-            <input
-              type="text"
-              value={filters.district}
-              onChange={(e) =>
-                setFilters({ ...filters, district: e.target.value })
-              }
-              placeholder="Enter district"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/40"
-            />
-          </div>
           <div>
             <label className="mb-1 block text-xs text-white/60">Category</label>
             <select

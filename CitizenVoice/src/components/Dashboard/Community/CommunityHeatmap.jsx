@@ -1,14 +1,12 @@
 // src/components/Dashboard/Community/CommunityHeatmap.jsx
 import React, { useState, useEffect } from "react";
 import HeatmapViewer from "../Shared/HeatmapViewer";
-import { issueService } from "../../../services/issueService";
+import { districtService, parseDistrictId } from "../../../services/districtService";
 import { Filter, MapPin, TrendingUp, AlertCircle } from "lucide-react";
 import { cn } from "../../../lib/utils";
 
-export function CommunityHeatmap() {
+export function CommunityHeatmap({ districtId }) {
   const [filters, setFilters] = useState({
-    state: "all",
-    district: "",
     category: "all",
     status: "all",
   });
@@ -18,18 +16,12 @@ export function CommunityHeatmap() {
     mediumPriority: 0,
     lowPriority: 0,
   });
+  const [heatmapData, setHeatmapData] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const indianStates = [
-    { value: "all", label: "All States" },
-    { value: "Andhra Pradesh", label: "Andhra Pradesh" },
-    { value: "Delhi", label: "Delhi" },
-    { value: "Karnataka", label: "Karnataka" },
-    { value: "Maharashtra", label: "Maharashtra" },
-    { value: "Tamil Nadu", label: "Tamil Nadu" },
-    { value: "Uttar Pradesh", label: "Uttar Pradesh" },
-    { value: "West Bengal", label: "West Bengal" },
-  ];
+  // Parse district info
+  const districtInfo = parseDistrictId(districtId);
 
   const categories = [
     { value: "all", label: "All Categories" },
@@ -52,31 +44,49 @@ export function CommunityHeatmap() {
   ];
 
   useEffect(() => {
-    fetchStats();
-  }, [filters]);
+    fetchHeatmapData();
+  }, [districtId, filters]);
 
-  const fetchStats = async () => {
+  const fetchHeatmapData = async () => {
     try {
-      const params = {
-        ...(filters.state !== "all" && { state: filters.state }),
-        ...(filters.district && { district: filters.district }),
-        ...(filters.category !== "all" && { category: filters.category }),
-        ...(filters.status !== "all" && { status: filters.status }),
-      };
-
-      const response = await issueService.getAllIssues(params);
-      const issues = response?.data?.issues || [];
-
+      setLoading(true);
+      const response = await districtService.getHeatmapData(districtId, filters);
+      const points = response?.points || [];
+      
+      setHeatmapData(points);
       setStats({
-        total: issues.length,
-        highPriority: issues.filter((i) => i.priority === "high").length,
-        mediumPriority: issues.filter((i) => i.priority === "medium").length,
-        lowPriority: issues.filter((i) => i.priority === "low").length,
+        total: points.length,
+        highPriority: points.filter((p) => p.issue?.priority === "high").length,
+        mediumPriority: points.filter((p) => p.issue?.priority === "medium").length,
+        lowPriority: points.filter((p) => p.issue?.priority === "low").length,
       });
     } catch (error) {
-      console.error("Failed to fetch stats:", error);
+      console.error("Failed to fetch heatmap data:", error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  // No district selected state
+  if (!districtId) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Community Heatmap</h2>
+          <p className="text-sm text-white/60">
+            Visualize issue distribution in your district
+          </p>
+        </div>
+        <div className="flex flex-col items-center justify-center h-96 rounded-xl border border-white/10 bg-white/5 p-8">
+          <MapPin className="h-12 w-12 text-white/40 mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">Select a District</h3>
+          <p className="text-white/60 text-center">
+            Choose a district from the dropdown above to view the issue heatmap.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -84,12 +94,29 @@ export function CommunityHeatmap() {
       <div>
         <h2 className="text-2xl font-bold text-white">Community Heatmap</h2>
         <p className="text-sm text-white/60">
-          Visualize issue distribution across districts
+          Issue distribution in {districtInfo.district}, {districtInfo.state}
         </p>
       </div>
 
       {/* Stats Cards */}
-     
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+          <p className="text-xs text-white/60">Total Issues</p>
+          <p className="text-2xl font-bold text-white">{stats.total}</p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+          <p className="text-xs text-white/60">High Priority</p>
+          <p className="text-2xl font-bold text-red-400">{stats.highPriority}</p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+          <p className="text-xs text-white/60">Medium Priority</p>
+          <p className="text-2xl font-bold text-amber-400">{stats.mediumPriority}</p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+          <p className="text-xs text-white/60">Low Priority</p>
+          <p className="text-2xl font-bold text-emerald-400">{stats.lowPriority}</p>
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="rounded-xl border border-white/10 bg-white/5 p-4">
@@ -110,35 +137,7 @@ export function CommunityHeatmap() {
         </div>
 
         {showFilters && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className="mb-1 block text-xs text-white/60">State</label>
-              <select
-                value={filters.state}
-                onChange={(e) =>
-                  setFilters({ ...filters, state: e.target.value, district: "" })
-                }
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
-              >
-                {indianStates.map((s) => (
-                  <option key={s.value} value={s.value} className="bg-black">
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-white/60">District</label>
-              <input
-                type="text"
-                value={filters.district}
-                onChange={(e) =>
-                  setFilters({ ...filters, district: e.target.value })
-                }
-                placeholder="Enter district name"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/40"
-              />
-            </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs text-white/60">Category</label>
               <select
@@ -187,7 +186,8 @@ export function CommunityHeatmap() {
             defaultCenter={[28.6139, 77.209]}
             defaultZoom={11}
             height="600px"
-            filters={filters}
+            filters={{ ...filters, districtId }}
+            heatmapData={heatmapData}
           />
         </div>
       </div>

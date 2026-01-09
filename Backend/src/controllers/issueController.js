@@ -54,6 +54,17 @@ const deleteImagesFromCloudinary = async (imageUrls) => {
   return deletionResults;
 };
 
+// Helper function to generate districtId from state and district
+const generateDistrictId = (state, district) => {
+  if (!state || !district) return null;
+  
+  // Convert to lowercase and replace spaces with hyphens for URL-friendly IDs
+  const stateSlug = state.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const districtSlug = district.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  
+  return `${stateSlug}__${districtSlug}`;
+};
+
 // Create Issue
 export const createIssue = asyncHandler(async (req, res) => {
   console.log('📝 [CreateIssue] Request received');
@@ -74,6 +85,10 @@ export const createIssue = asyncHandler(async (req, res) => {
   if (!locationData.lat || !locationData.lng) {
     throw new ApiError(400, 'GPS coordinates required');
   }
+  
+  // Generate districtId from location data
+  const districtId = generateDistrictId(locationData.state, locationData.district);
+  console.log('📍 [CreateIssue] Generated districtId:', districtId);
   
   // Get uploaded image URLs
   const useCloudinary = process.env.USE_CLOUDINARY === 'true';
@@ -102,7 +117,7 @@ export const createIssue = asyncHandler(async (req, res) => {
   
   console.log('📸 [CreateIssue] Final image URLs:', imageUrls);
   
-  // Create issue
+  // Create issue with districtId
   let issue;
   try {
     issue = await Issue.create({
@@ -111,11 +126,13 @@ export const createIssue = asyncHandler(async (req, res) => {
       category,
       priority: priority || 'medium',
       location: locationData,
+      districtId,  // Store the district ID for area-scoped queries
       images: imageUrls,
       reportedBy: req.user._id
     });
     
     console.log('✅ [CreateIssue] Issue created with images:', issue.images);
+    console.log('✅ [CreateIssue] Issue districtId:', issue.districtId);
   } catch (error) {
     // If database save fails, clean up uploaded images from Cloudinary
     if (imageUrls.length > 0 && useCloudinary) {

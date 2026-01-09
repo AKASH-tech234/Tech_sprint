@@ -2,14 +2,18 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useDistrict, DistrictProvider } from "../../context/DistrictContext";
 import { DashboardLayout } from "../../components/Dashboard/Shared/DashboardLayout";
 import { StatsCard } from "../../components/Dashboard/Shared/StatsCard";
 import { AreaIssues } from "../../components/Dashboard/Community/areaissue";
 import { VerificationPanel } from "../../components/Dashboard/Community/verificationpanel";
 import { VerificationQueue } from "../../components/Dashboard/Community/VerificationQueue";
 import { CommunityStats } from "../../components/Dashboard/Community/communitystats";
+import { CommunityChat } from "../../components/Dashboard/Community/CommunityChat";
+import { DistrictSwitcher } from "../../components/Dashboard/Community/DistrictSwitcher";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import { issueService } from "../../services/issueService";
+import { districtService } from "../../services/districtService";
 import { verificationService } from "../../services/verificationService";
 import { userService } from "../../services/userService";
 import {
@@ -32,6 +36,7 @@ import {
 function DashboardHome() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { activeDistrictId, districtInfo } = useDistrict();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
@@ -46,38 +51,63 @@ function DashboardHome() {
   const [recentActivity, setRecentActivity] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
 
-  // Fetch all data on mount
+  // Fetch all data on mount and when district changes
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [activeDistrictId]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // Fetch all data in parallel
+      // Fetch data based on selected district
       const [
         issuesResponse,
+        communityStatsResponse,
         profileResponse,
         unverifiedResponse,
       ] = await Promise.all([
-        issueService.getIssues({ limit: 50 }).catch(err => ({ data: { issues: [] } })),
+        // Fetch district-specific issues if district selected
+        activeDistrictId 
+          ? districtService.getDistrictIssues(activeDistrictId, { limit: 50 })
+          : issueService.getIssues({ limit: 50 }).catch(err => ({ data: { issues: [] } })),
+        // Fetch district-specific community stats
+        districtService.getCommunityStats(activeDistrictId).catch(err => null),
         userService.getProfile().catch(err => null),
         verificationService.getUnverifiedIssues().catch(err => ({ data: { issues: [] } })),
       ]);
 
       // Process issues data
-      const allIssues = issuesResponse?.data?.issues || [];
+      const allIssues = issuesResponse?.issues || issuesResponse?.data?.issues || [];
       
-      // Calculate stats
-      const activeIssues = allIssues.filter(i => 
-        ['reported', 'acknowledged', 'in-progress'].includes(i.status)
-      );
-      const resolvedIssues = allIssues.filter(i => i.status === 'resolved');
-      const resolutionRate = allIssues.length > 0 
-        ? Math.round((resolvedIssues.length / allIssues.length) * 100) 
-        : 0;
+      // Use community stats if available
+      if (communityStatsResponse?.overviewStats) {
+        const { totalIssues, resolved } = communityStatsResponse.overviewStats;
+        const resolutionRate = totalIssues > 0 
+          ? Math.round((resolved / totalIssues) * 100) 
+          : 0;
+        
+        setStats({
+          areaIssues: totalIssues,
+          resolutionRate,
+          activeMembers: 1234, // This would come from a community members count
+          verifiedCount: resolved,
+        });
+      } else {
+        // Calculate stats from issues
+        const resolvedIssues = allIssues.filter(i => i.status === 'resolved');
+        const resolutionRate = allIssues.length > 0 
+          ? Math.round((resolvedIssues.length / allIssues.length) * 100) 
+          : 0;
+        
+        setStats({
+          areaIssues: allIssues.length,
+          resolutionRate,
+          activeMembers: 1234,
+          verifiedCount: resolvedIssues.length,
+        });
+      }
       
       // Get top issues by upvotes
       const sortedByUpvotes = [...allIssues]
@@ -93,13 +123,6 @@ function DashboardHome() {
       const pendingIssues = unverifiedResponse?.data?.issues || 
         allIssues.filter(i => i.status === 'reported' || i.status === 'resolved');
 
-      setStats({
-        areaIssues: allIssues.length,
-        resolutionRate,
-        activeMembers: 1234, // This would come from a community stats API
-        verifiedCount: resolvedIssues.length,
-      });
-      
       setTopIssues(sortedByUpvotes);
       setRecentIssues(recentSorted);
       setPendingVerifications(pendingIssues.slice(0, 5));
@@ -458,21 +481,6 @@ function DashboardHome() {
   );
 }
 
-// Map placeholder
-function MapPage() {
-  const CommunityHeatmap = React.lazy(() => import("../../components/Dashboard/Community/CommunityHeatmap"));
-  
-  return (
-    <React.Suspense fallback={
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
-      </div>
-    }>
-      <CommunityHeatmap />
-    </React.Suspense>
-  );
-}
-
 // Settings placeholder
 function SettingsPage() {
   return (
@@ -553,19 +561,72 @@ function SettingsPage() {
   );
 }
 
-// Main Community Dashboard with routes
-export default function CommunityDashboard() {
+// Wrapper components that use district context
+function AreaIssuesPage() {
+  const { activeDistrictId } = useDistrict();
+  return <AreaIssues districtId={activeDistrictId} />;
+}
+
+function CommunityStatsPage() {
+  const { activeDistrictId } = useDistrict();
+  return <CommunityStats districtId={activeDistrictId} />;
+}
+
+function CommunityChatPage() {
+  const { activeDistrictId } = useDistrict();
+  return <CommunityChat districtId={activeDistrictId} />;
+}
+
+// Map/Heatmap page
+function MapPage() {
+  const { activeDistrictId } = useDistrict();
+  const CommunityHeatmap = React.lazy(() => import("../../components/Dashboard/Community/CommunityHeatmap"));
+  
+  return (
+    <React.Suspense fallback={
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+      </div>
+    }>
+      <CommunityHeatmap districtId={activeDistrictId} />
+    </React.Suspense>
+  );
+}
+
+// Verification Queue page with district filtering
+function VerificationQueuePage() {
+  const { activeDistrictId } = useDistrict();
+  return <VerificationQueue districtId={activeDistrictId} />;
+}
+
+// Inner dashboard with routes
+function CommunityDashboardInner() {
   return (
     <DashboardLayout role="community">
+      {/* District Selector at top */}
+      <div className="mb-6">
+        <DistrictSwitcher />
+      </div>
+      
       <Routes>
         <Route index element={<DashboardHome />} />
-        <Route path="area" element={<AreaIssues />} />
-        <Route path="verify" element={<VerificationQueue />} />
-        <Route path="stats" element={<CommunityStats />} />
+        <Route path="area" element={<AreaIssuesPage />} />
+        <Route path="verify" element={<VerificationQueuePage />} />
+        <Route path="stats" element={<CommunityStatsPage />} />
+        <Route path="chat" element={<CommunityChatPage />} />
         <Route path="map" element={<MapPage />} />
         <Route path="heatmap" element={<MapPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Routes>
     </DashboardLayout>
+  );
+}
+
+// Main Community Dashboard with DistrictProvider
+export default function CommunityDashboard() {
+  return (
+    <DistrictProvider>
+      <CommunityDashboardInner />
+    </DistrictProvider>
   );
 }

@@ -76,8 +76,15 @@ class VerificationService {
   }
 
   // Get unverified issues for community
-  async getUnverifiedIssues() {
-    const response = await fetch(`${API_BASE_URL}/verification/community/unverified-issues`, {
+  async getUnverifiedIssues(districtId = null) {
+    const params = new URLSearchParams();
+    if (districtId) {
+      params.append('districtId', districtId);
+    }
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/verification/community/unverified-issues${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await fetch(url, {
       method: 'GET',
       credentials: 'include',
       headers: {

@@ -7,6 +7,11 @@ const issueSchema = new mongoose.Schema({
     required: true,
     default: () => `ISS-${Date.now()}`
   },
+  // District ID for area-scoped queries (format: "state__district", e.g., "maharashtra__mumbai")
+  districtId: {
+    type: String,
+    index: true  // Index for efficient district-based queries
+  },
   title: {
     type: String,
     required: true,

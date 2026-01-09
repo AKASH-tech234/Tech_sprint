@@ -1,17 +1,25 @@
 import Issue from '../models/Issue.js';
 import { User } from '../models/userModel.js';
+import CommunityChat from '../models/CommunityChat.js';
 
 // GET /api/community/stats
+// Supports district filtering via query param ?districtId=state__district
 export const getCommunityStats = async (req, res) => {
   try {
-    const totalIssues = await Issue.countDocuments();
-    const reported = await Issue.countDocuments({ status: 'reported' });
-    const acknowledged = await Issue.countDocuments({ status: 'acknowledged' });
-    const inProgress = await Issue.countDocuments({ status: 'in-progress' });
-    const resolved = await Issue.countDocuments({ status: 'resolved' });
+    const { districtId } = req.query;
+    
+    // Build query filter
+    const filter = districtId ? { districtId } : {};
+    
+    const totalIssues = await Issue.countDocuments(filter);
+    const reported = await Issue.countDocuments({ ...filter, status: 'reported' });
+    const acknowledged = await Issue.countDocuments({ ...filter, status: 'acknowledged' });
+    const inProgress = await Issue.countDocuments({ ...filter, status: 'in-progress' });
+    const resolved = await Issue.countDocuments({ ...filter, status: 'resolved' });
 
     // category breakdown
     const categoryAgg = await Issue.aggregate([
+      { $match: filter },
       { $group: { _id: '$category', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
@@ -21,7 +29,7 @@ export const getCommunityStats = async (req, res) => {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
 
     const monthlyAgg = await Issue.aggregate([
-      { $match: { createdAt: { $gte: sixMonthsAgo } } },
+      { $match: { ...filter, createdAt: { $gte: sixMonthsAgo } } },
       { $project: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, status: 1 } },
       { $group: { _id: { year: '$year', month: '$month', status: '$status' }, count: { $sum: 1 } } },
       { $sort: { '_id.year': 1, '_id.month': 1 } }
@@ -43,6 +51,7 @@ export const getCommunityStats = async (req, res) => {
     }));
 
     res.json({
+      districtId: districtId || 'all',
       overviewStats: {
         totalIssues,
         reported,
@@ -60,13 +69,19 @@ export const getCommunityStats = async (req, res) => {
 };
 
 // GET /api/community/leaderboard
+// Supports district filtering via query param ?districtId=state__district
 export const getCommunityLeaderboard = async (req, res) => {
   try {
+    const { districtId } = req.query;
     const limit = parseInt(req.query.limit || '10', 10);
+
+    // Build query filter for district-scoped leaderboard
+    const matchStage = districtId ? { $match: { districtId } } : { $match: {} };
 
     // Simple leaderboard: count verifications or reports per user and points
     // Here we use reportedBy + verifiedCount on issues to approximate contribution
     const agg = await Issue.aggregate([
+      matchStage,
       { $group: { _id: '$reportedBy', reports: { $sum: 1 }, verifications: { $sum: '$verifiedCount' } } },
       { $sort: { verifications: -1, reports: -1 } },
       { $limit: limit }
@@ -87,11 +102,199 @@ export const getCommunityLeaderboard = async (req, res) => {
       };
     });
 
-    res.json({ leaderboard });
+    res.json({ districtId: districtId || 'all', leaderboard });
   } catch (err) {
     console.error('getCommunityLeaderboard error', err);
     res.status(500).json({ message: 'Failed to compute leaderboard' });
   }
 };
 
-export default { getCommunityStats, getCommunityLeaderboard };
+// GET /api/community/issues
+// Get district-specific issues for community section
+export const getCommunityIssues = async (req, res) => {
+  try {
+    const { districtId, status, category, limit = 50 } = req.query;
+    
+    const filter = {};
+    if (districtId) filter.districtId = districtId;
+    if (status && status !== 'all') filter.status = status;
+    if (category && category !== 'all') filter.category = category;
+    
+    const issues = await Issue.find(filter)
+      .populate('reportedBy', 'username avatar')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+    
+    res.json({
+      districtId: districtId || 'all',
+      issues,
+      total: issues.length
+    });
+  } catch (err) {
+    console.error('getCommunityIssues error', err);
+    res.status(500).json({ message: 'Failed to fetch community issues' });
+  }
+};
+
+// GET /api/community/chat
+// Get community chat messages for a district
+export const getCommunityChat = async (req, res) => {
+  try {
+    const { districtId, limit = 100, before } = req.query;
+    
+    if (!districtId) {
+      return res.status(400).json({ message: 'districtId is required' });
+    }
+    
+    const filter = { districtId, isDeleted: { $ne: true } };
+    if (before) {
+      filter.createdAt = { $lt: new Date(before) };
+    }
+    
+    const messages = await CommunityChat.find(filter)
+      .populate('sender', 'username avatar displayName')
+      .populate('sharedIssue', 'title issueId category status')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+    
+    // Return in chronological order (oldest first)
+    res.json({
+      districtId,
+      messages: messages.reverse(),
+      hasMore: messages.length === parseInt(limit)
+    });
+  } catch (err) {
+    console.error('getCommunityChat error', err);
+    res.status(500).json({ message: 'Failed to fetch community chat' });
+  }
+};
+
+// POST /api/community/chat
+// Send a message to district community chat
+export const sendCommunityMessage = async (req, res) => {
+  try {
+    const { districtId, message, type = 'text', sharedIssueId, imageUrl } = req.body;
+    
+    if (!districtId) {
+      return res.status(400).json({ message: 'districtId is required' });
+    }
+    
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({ message: 'Message content is required' });
+    }
+    
+    const chatMessage = await CommunityChat.create({
+      districtId,
+      sender: req.user._id,
+      message: message.trim(),
+      type,
+      sharedIssue: type === 'issue_share' ? sharedIssueId : undefined,
+      imageUrl: type === 'image' ? imageUrl : undefined,
+      readBy: [req.user._id]  // Sender has read their own message
+    });
+    
+    await chatMessage.populate('sender', 'username avatar displayName');
+    if (chatMessage.sharedIssue) {
+      await chatMessage.populate('sharedIssue', 'title issueId category status');
+    }
+    
+    res.status(201).json({
+      message: chatMessage,
+      success: true
+    });
+  } catch (err) {
+    console.error('sendCommunityMessage error', err);
+    res.status(500).json({ message: 'Failed to send message' });
+  }
+};
+
+// POST /api/community/chat/:messageId/react
+// Add reaction to a chat message
+export const reactToMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { reaction } = req.body;
+    
+    if (!['like', 'helpful', 'support'].includes(reaction)) {
+      return res.status(400).json({ message: 'Invalid reaction type' });
+    }
+    
+    const chatMessage = await CommunityChat.findById(messageId);
+    if (!chatMessage) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+    
+    // Check if user already reacted
+    const existingReaction = chatMessage.reactions.find(
+      r => r.user.toString() === req.user._id.toString()
+    );
+    
+    if (existingReaction) {
+      // Update existing reaction
+      existingReaction.reaction = reaction;
+    } else {
+      // Add new reaction
+      chatMessage.reactions.push({ user: req.user._id, reaction });
+    }
+    
+    await chatMessage.save();
+    
+    res.json({ success: true, reactions: chatMessage.reactions });
+  } catch (err) {
+    console.error('reactToMessage error', err);
+    res.status(500).json({ message: 'Failed to react to message' });
+  }
+};
+
+// GET /api/community/heatmap
+// Get heatmap data for a specific district
+export const getDistrictHeatmap = async (req, res) => {
+  try {
+    const { districtId, status, category } = req.query;
+    
+    const filter = {};
+    if (districtId) filter.districtId = districtId;
+    if (status && status !== 'all') filter.status = status;
+    if (category && category !== 'all') filter.category = category;
+    
+    const issues = await Issue.find(filter)
+      .select('issueId title category status priority location districtId createdAt')
+      .lean();
+    
+    // Transform for heatmap
+    const heatmapPoints = issues
+      .filter(i => i.location?.lat && i.location?.lng)
+      .map(i => ({
+        lat: i.location.lat,
+        lng: i.location.lng,
+        weight: i.priority === 'high' ? 1.0 : i.priority === 'medium' ? 0.6 : 0.3,
+        issue: {
+          id: i._id,
+          issueId: i.issueId,
+          title: i.title,
+          category: i.category,
+          status: i.status,
+          priority: i.priority
+        }
+      }));
+    
+    res.json({
+      districtId: districtId || 'all',
+      points: heatmapPoints,
+      total: heatmapPoints.length
+    });
+  } catch (err) {
+    console.error('getDistrictHeatmap error', err);
+    res.status(500).json({ message: 'Failed to fetch heatmap data' });
+  }
+};
+
+export default { 
+  getCommunityStats, 
+  getCommunityLeaderboard,
+  getCommunityIssues,
+  getCommunityChat,
+  sendCommunityMessage,
+  reactToMessage,
+  getDistrictHeatmap
+};

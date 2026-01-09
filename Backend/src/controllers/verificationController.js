@@ -191,6 +191,7 @@ export const checkUserVerification = asyncHandler(async (req, res) => {
 // Get unverified issues in community area
 export const getUnverifiedIssuesInArea = asyncHandler(async (req, res) => {
   const userId = req.user._id;
+  const { districtId } = req.query;
   
   // Check if community role
   if (req.user.role !== 'community') {
@@ -210,6 +211,11 @@ export const getUnverifiedIssuesInArea = asyncHandler(async (req, res) => {
     status: { $in: ['reported', 'acknowledged', 'in-progress'] },
   };
 
+  // Filter by districtId if provided
+  if (districtId) {
+    query.districtId = districtId;
+  }
+
   // If user has area, filter by area (optional - can be removed for all issues)
   // if (userArea) {
   //   query['location.address'] = { $regex: userArea, $options: 'i' };
@@ -217,7 +223,7 @@ export const getUnverifiedIssuesInArea = asyncHandler(async (req, res) => {
 
   const issues = await Issue.find(query)
     .populate('reportedBy', 'username')
-    .select('issueId title description location images status priority createdAt verifiedCount incorrectCount')
+    .select('issueId title description location images status priority createdAt verifiedCount incorrectCount districtId')
     .sort({ createdAt: -1 })
     .limit(50);
 
