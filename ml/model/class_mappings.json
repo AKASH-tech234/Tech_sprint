@@ -1,0 +1,114 @@
+{
+  "class_to_idx": {
+    "Damaged concrete structures": 0,
+    "DamagedElectricalPoles": 1,
+    "DamagedRoadSigns": 2,
+    "DeadAnimalsPollution": 3,
+    "FallenTrees": 4,
+    "Garbage": 5,
+    "Graffitti": 6,
+    "IllegalParking": 7,
+    "Potholes and RoadCracks": 8
+  },
+  "idx_to_class": {
+    "0": "Damaged concrete structures",
+    "1": "DamagedElectricalPoles",
+    "2": "DamagedRoadSigns",
+    "3": "DeadAnimalsPollution",
+    "4": "FallenTrees",
+    "5": "Garbage",
+    "6": "Graffitti",
+    "7": "IllegalParking",
+    "8": "Potholes and RoadCracks"
+  },
+  "index_to_category": {
+    "0": {
+      "category": "INFRASTRUCTURE",
+      "original_name": "Damaged concrete structures",
+      "department": "Public Works Department (PWD)",
+      "priority": "high"
+    },
+    "1": {
+      "category": "STREETLIGHT",
+      "original_name": "DamagedElectricalPoles",
+      "department": "Electrical Department",
+      "priority": "high"
+    },
+    "2": {
+      "category": "ROAD_SIGNS",
+      "original_name": "DamagedRoadSigns",
+      "department": "Traffic Department",
+      "priority": "medium"
+    },
+    "3": {
+      "category": "POLLUTION",
+      "original_name": "DeadAnimalsPollution",
+      "department": "Environmental Health Department",
+      "priority": "high"
+    },
+    "4": {
+      "category": "FALLEN_TREES",
+      "original_name": "FallenTrees",
+      "department": "Parks & Recreation Department",
+      "priority": "high"
+    },
+    "5": {
+      "category": "GARBAGE",
+      "original_name": "Garbage",
+      "department": "Sanitation Department",
+      "priority": "medium"
+    },
+    "6": {
+      "category": "GRAFFITI",
+      "original_name": "Graffitti",
+      "department": "Municipal Cleaning Department",
+      "priority": "low"
+    },
+    "7": {
+      "category": "ILLEGAL_PARKING",
+      "original_name": "IllegalParking",
+      "department": "Traffic Police Department",
+      "priority": "low"
+    },
+    "8": {
+      "category": "ROAD_POTHOLE",
+      "original_name": "Potholes and RoadCracks",
+      "department": "Public Works Department (PWD)",
+      "priority": "high"
+    }
+  },
+  "category_mapping": {
+    "Potholes and RoadCracks": "ROAD_POTHOLE",
+    "Garbage": "GARBAGE",
+    "DamagedElectricalPoles": "STREETLIGHT",
+    "Damaged concrete structures": "INFRASTRUCTURE",
+    "DamagedRoadSigns": "ROAD_SIGNS",
+    "DeadAnimalsPollution": "POLLUTION",
+    "FallenTrees": "FALLEN_TREES",
+    "Graffitti": "GRAFFITI",
+    "IllegalParking": "ILLEGAL_PARKING"
+  },
+  "department_mapping": {
+    "ROAD_POTHOLE": "Public Works Department (PWD)",
+    "GARBAGE": "Sanitation Department",
+    "STREETLIGHT": "Electrical Department",
+    "INFRASTRUCTURE": "Public Works Department (PWD)",
+    "ROAD_SIGNS": "Traffic Department",
+    "POLLUTION": "Environmental Health Department",
+    "FALLEN_TREES": "Parks & Recreation Department",
+    "GRAFFITI": "Municipal Cleaning Department",
+    "ILLEGAL_PARKING": "Traffic Police Department"
+  },
+  "priority_mapping": {
+    "ROAD_POTHOLE": "high",
+    "GARBAGE": "medium",
+    "STREETLIGHT": "high",
+    "INFRASTRUCTURE": "high",
+    "ROAD_SIGNS": "medium",
+    "POLLUTION": "high",
+    "FALLEN_TREES": "high",
+    "GRAFFITI": "low",
+    "ILLEGAL_PARKING": "low"
+  },
+  "num_classes": 9
+}

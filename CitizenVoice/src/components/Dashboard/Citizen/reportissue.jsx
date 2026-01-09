@@ -12,21 +12,24 @@ import {
   AlertTriangle,
   Image as ImageIcon,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { issueService } from "../../../services/issueService";
+import classificationService from "../../../services/classificationService";
+import ClassificationResults from "../../ClassificationResults";
 
 /**
  * BACKEND API ENDPOINTS REQUIRED:
- * 
+ *
  * 1. POST /api/issues/create
  *    - Accepts: FormData with fields: title, description, category, priority, location (JSON), images (files)
  *    - Returns: { success: true, issue: {...}, message: "Issue created successfully" }
- * 
+ *
  * 2. POST /api/geocoding/reverse
  *    - Accepts: { lat: number, lng: number }
  *    - Returns: { address: string, city: string, state: string }
  *    - Used to convert GPS coordinates to human-readable address
- * 
+ *
  * 3. POST /api/uploads/images
  *    - Accepts: FormData with image files
  *    - Returns: { urls: string[] }
@@ -42,6 +45,16 @@ const categories = [
   { value: "noise", label: "Noise Complaint", icon: "🔊" },
   { value: "safety", label: "Public Safety", icon: "⚠️" },
   { value: "other", label: "Other", icon: "📋" },
+  // ML Model categories
+  { value: "INFRASTRUCTURE", label: "Infrastructure", icon: "🏗️" },
+  { value: "STREETLIGHT", label: "Streetlight", icon: "💡" },
+  { value: "ROAD_SIGNS", label: "Road Signs", icon: "🚧" },
+  { value: "POLLUTION", label: "Pollution", icon: "🏭" },
+  { value: "FALLEN_TREES", label: "Fallen Trees", icon: "🌳" },
+  { value: "GARBAGE", label: "Garbage", icon: "🗑️" },
+  { value: "GRAFFITI", label: "Graffiti", icon: "🎨" },
+  { value: "ILLEGAL_PARKING", label: "Illegal Parking", icon: "🚗" },
+  { value: "ROAD_POTHOLE", label: "Road Pothole", icon: "🕳️" },
 ];
 
 const priorities = [
@@ -50,7 +63,13 @@ const priorities = [
   { value: "high", label: "High", color: "text-rose-400" },
 ];
 
-export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, initialData = null }) {
+export function ReportIssue({
+  isOpen,
+  onClose,
+  onSuccess,
+  editMode = false,
+  initialData = null,
+}) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -61,7 +80,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
       lat: null,
       lng: null,
       city: "",
-      state: ""
+      state: "",
     },
   });
   const [images, setImages] = useState([]);
@@ -72,6 +91,11 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
   const [success, setSuccess] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
+
+  // AI Classification state
+  const [classification, setClassification] = useState(null);
+  const [classifying, setClassifying] = useState(false);
+  const [classificationError, setClassificationError] = useState(null);
 
   // Initialize form data when editing
   useEffect(() => {
@@ -86,10 +110,10 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
           lat: null,
           lng: null,
           city: "",
-          state: ""
+          state: "",
         },
       });
-      
+
       // Set existing images if any
       if (initialData.images && initialData.images.length > 0) {
         setImagePreviews(initialData.images);
@@ -120,9 +144,9 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
-    
+
     // Validation
     if (files.length + images.length > 5) {
       setError("Maximum 5 images allowed");
@@ -131,8 +155,16 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
     }
 
     // Validate file types
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+    const validTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
+    const invalidFiles = files.filter(
+      (file) => !validTypes.includes(file.type)
+    );
     if (invalidFiles.length > 0) {
       setError("Only JPEG, PNG, WebP, and GIF images are allowed");
       setTimeout(() => setError(null), 3000);
@@ -141,7 +173,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
 
     // Validate file sizes (max 5MB each)
     const maxSize = 5 * 1024 * 1024; // 5MB
-    const oversizedFiles = files.filter(file => file.size > maxSize);
+    const oversizedFiles = files.filter((file) => file.size > maxSize);
     if (oversizedFiles.length > 0) {
       setError("Each image must be less than 5MB");
       setTimeout(() => setError(null), 3000);
@@ -162,6 +194,47 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
     });
 
     setImages((prev) => [...prev, ...files]);
+
+    // Trigger AI classification for the first image
+    if (files.length > 0 && !classification) {
+      await classifyImage(files[0]);
+    }
+  };
+
+  // AI Classification function
+  const classifyImage = async (imageFile) => {
+    setClassifying(true);
+    setClassificationError(null);
+
+    try {
+      const result = await classificationService.classifyImage(imageFile);
+      setClassification(result);
+      console.log("✅ AI Classification result:", result);
+    } catch (err) {
+      console.error("❌ Classification error:", err);
+      setClassificationError(err.message || "Failed to classify image");
+      // Don't block the form on classification failure
+    } finally {
+      setClassifying(false);
+    }
+  };
+
+  // Accept AI classification suggestion
+  const handleAcceptClassification = () => {
+    if (classification) {
+      setFormData((prev) => ({
+        ...prev,
+        category: classification.category,
+        priority: classification.priority || prev.priority,
+      }));
+      // Don't clear classification so user can see what was suggested
+    }
+  };
+
+  // Reject AI classification suggestion
+  const handleRejectClassification = () => {
+    setClassification(null);
+    // User will manually select category
   };
 
   const removeImage = (index) => {
@@ -182,9 +255,13 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude, accuracy } = position.coords;
-        
-        console.log(`✅ Location acquired: ${latitude}, ${longitude} (accuracy: ${accuracy.toFixed(0)}m)`);
-        
+
+        console.log(
+          `✅ Location acquired: ${latitude}, ${longitude} (accuracy: ${accuracy.toFixed(
+            0
+          )}m)`
+        );
+
         // Update coordinates immediately
         setFormData((prev) => ({
           ...prev,
@@ -203,7 +280,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
            * Body: { lat: latitude, lng: longitude }
            * Response: { address: string, city: string, state: string, country: string }
            */
-          
+
           // Uncomment when backend is ready:
           // const response = await fetch('/api/geocoding/reverse', {
           //   method: 'POST',
@@ -212,12 +289,14 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
           //   body: JSON.stringify({ lat: latitude, lng: longitude })
           // });
           // const data = await response.json();
-          
+
           // Mock response for now
-          const mockAddress = `${latitude.toFixed(6)}°N, ${longitude.toFixed(6)}°E`;
+          const mockAddress = `${latitude.toFixed(6)}°N, ${longitude.toFixed(
+            6
+          )}°E`;
           const mockCity = "Your City";
           const mockState = "Your State";
-          
+
           setFormData((prev) => ({
             ...prev,
             location: {
@@ -227,7 +306,6 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
               state: mockState,
             },
           }));
-
         } catch (err) {
           console.error("❌ Reverse geocoding failed:", err);
           // Fallback to coordinates
@@ -239,7 +317,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
             },
           }));
         }
-        
+
         setGettingLocation(false);
       },
       (error) => {
@@ -247,16 +325,20 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
         let errorMessage = "Unable to get your location. ";
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = "Location permission denied. Please enable location access in your browser settings or enter location manually.";
+            errorMessage =
+              "Location permission denied. Please enable location access in your browser settings or enter location manually.";
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = "Location information is unavailable. Please enter location manually.";
+            errorMessage =
+              "Location information is unavailable. Please enter location manually.";
             break;
           case error.TIMEOUT:
-            errorMessage = "Location request timed out. Please try again or enter manually.";
+            errorMessage =
+              "Location request timed out. Please try again or enter manually.";
             break;
           default:
-            errorMessage = "An error occurred while getting location. Please enter manually.";
+            errorMessage =
+              "An error occurred while getting location. Please enter manually.";
         }
         console.warn("⚠️ " + errorMessage);
         // Don't show error for permission denial, just log it
@@ -265,7 +347,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 0
+        maximumAge: 0,
       }
     );
   };
@@ -298,15 +380,15 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
     try {
       // Prepare FormData for multipart upload
       const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('category', formData.category);
-      formDataToSend.append('priority', formData.priority);
-      formDataToSend.append('location', JSON.stringify(formData.location));
-      
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("category", formData.category);
+      formDataToSend.append("priority", formData.priority);
+      formDataToSend.append("location", JSON.stringify(formData.location));
+
       // Append new images (if any)
       images.forEach((image, index) => {
-        formDataToSend.append('images', image);
+        formDataToSend.append("images", image);
       });
 
       // Simulate upload progress
@@ -321,27 +403,38 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
       }, 200);
 
       let result;
-      
+
       if (editMode && initialData) {
         // Update existing issue
-        result = await issueService.updateIssue(initialData._id, formDataToSend);
+        result = await issueService.updateIssue(
+          initialData._id,
+          formDataToSend
+        );
       } else {
         // Create new issue - saved to MongoDB via API
         result = await issueService.createIssue(formDataToSend);
-        
+
         // Clean up any old localStorage data to prevent quota errors
         try {
-          localStorage.removeItem('userIssues');
+          localStorage.removeItem("userIssues");
         } catch (e) {
-          console.warn('Could not clean localStorage:', e);
+          console.warn("Could not clean localStorage:", e);
         }
 
         // Dispatch custom event to notify other components to refresh from API
-        const newIssue = result.issue || result.data?.issue || { id: `ISS-${Date.now()}` };
-        window.dispatchEvent(new CustomEvent('issueCreated', { detail: { id: newIssue._id || newIssue.id } }));
-        console.log("✅ Issue created in database:", newIssue._id || newIssue.id);
+        const newIssue = result.issue ||
+          result.data?.issue || { id: `ISS-${Date.now()}` };
+        window.dispatchEvent(
+          new CustomEvent("issueCreated", {
+            detail: { id: newIssue._id || newIssue.id },
+          })
+        );
+        console.log(
+          "✅ Issue created in database:",
+          newIssue._id || newIssue.id
+        );
       }
-      
+
       clearInterval(progressInterval);
       setUploadProgress(100);
       setSuccess(true);
@@ -359,7 +452,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
         setImagePreviews([]);
         setSuccess(false);
         setUploadProgress(0);
-        
+
         // Pass the FormData or result to parent for database update
         if (editMode) {
           onSuccess?.(formDataToSend); // Pass FormData for update
@@ -369,8 +462,14 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
         onClose?.();
       }, 2000);
     } catch (err) {
-      console.error(editMode ? "Issue update error:" : "Issue creation error:", err);
-      setError(err.message || `Failed to ${editMode ? 'update' : 'submit'} issue. Please try again.`);
+      console.error(
+        editMode ? "Issue update error:" : "Issue creation error:",
+        err
+      );
+      setError(
+        err.message ||
+          `Failed to ${editMode ? "update" : "submit"} issue. Please try again.`
+      );
       setUploadProgress(0);
     } finally {
       setLoading(false);
@@ -402,7 +501,9 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
               <CheckCircle2 className="h-8 w-8 text-emerald-400" />
             </div>
             <h3 className="mb-2 text-xl font-semibold text-white">
-              {editMode ? "Issue Updated Successfully!" : "Issue Reported Successfully!"}
+              {editMode
+                ? "Issue Updated Successfully!"
+                : "Issue Reported Successfully!"}
             </h3>
             <p className="text-center text-white/60">
               Thank you for your report. We'll notify you when there's an
@@ -410,7 +511,11 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6" style={{ maxHeight: 'calc(90vh - 80px)' }}>
+          <form
+            onSubmit={handleSubmit}
+            className="flex-1 overflow-y-auto p-6"
+            style={{ maxHeight: "calc(90vh - 80px)" }}
+          >
             {/* Error message */}
             {error && (
               <div className="mb-4 flex items-center gap-2 rounded-lg bg-rose-500/20 p-3 text-sm text-rose-400">
@@ -471,6 +576,35 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
                 onChange={handleImageUpload}
                 className="hidden"
               />
+
+              {/* AI Classification Loading State */}
+              {classifying && (
+                <div className="mt-4 flex items-center gap-2 rounded-lg bg-blue-500/20 p-3 text-sm text-blue-400">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Analyzing image with AI...</span>
+                </div>
+              )}
+
+              {/* AI Classification Error */}
+              {classificationError && (
+                <div className="mt-4 flex items-center gap-2 rounded-lg bg-amber-500/20 p-3 text-sm text-amber-400">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>
+                    AI classification unavailable: {classificationError}
+                  </span>
+                </div>
+              )}
+
+              {/* AI Classification Results */}
+              {classification && !classifying && (
+                <div className="mt-4">
+                  <ClassificationResults
+                    classification={classification}
+                    onAccept={handleAcceptClassification}
+                    onReject={handleRejectClassification}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Title */}
@@ -546,7 +680,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
               <label className="mb-2 block text-sm font-medium text-white">
                 Location *
               </label>
-              
+
               {/* Address Input with GPS Button */}
               <div className="mb-3 flex gap-2">
                 <input
@@ -581,32 +715,46 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
                     <CheckCircle2 className="h-4 w-4" />
                     GPS Location Captured
                   </div>
-                  
+
                   {/* Coordinate Inputs */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1 block text-xs text-white/60">Latitude</label>
+                      <label className="mb-1 block text-xs text-white/60">
+                        Latitude
+                      </label>
                       <input
                         type="number"
                         step="0.000001"
                         value={formData.location.lat}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          location: { ...prev.location, lat: parseFloat(e.target.value) }
-                        }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            location: {
+                              ...prev.location,
+                              lat: parseFloat(e.target.value),
+                            },
+                          }))
+                        }
                         className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-emerald-500/50"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs text-white/60">Longitude</label>
+                      <label className="mb-1 block text-xs text-white/60">
+                        Longitude
+                      </label>
                       <input
                         type="number"
                         step="0.000001"
                         value={formData.location.lng}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          location: { ...prev.location, lng: parseFloat(e.target.value) }
-                        }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            location: {
+                              ...prev.location,
+                              lng: parseFloat(e.target.value),
+                            },
+                          }))
+                        }
                         className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-emerald-500/50"
                       />
                     </div>
@@ -619,7 +767,8 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
                         <MapPin className="mb-2 h-8 w-8 text-emerald-400" />
                         <p className="text-xs text-white/60">Map Preview</p>
                         <p className="text-xs text-white/40">
-                          {formData.location.lat.toFixed(6)}, {formData.location.lng.toFixed(6)}
+                          {formData.location.lat.toFixed(6)},{" "}
+                          {formData.location.lng.toFixed(6)}
                         </p>
                       </div>
                       {/* This is where Google Maps or Leaflet map would be embedded */}
@@ -640,7 +789,7 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
                   <p className="mt-1 text-xs text-white/40">
                     Or enter coordinates manually below
                   </p>
-                  
+
                   {/* Manual Coordinate Entry */}
                   <div className="mt-3 grid grid-cols-2 gap-3">
                     <div>
@@ -651,9 +800,9 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           if (!isNaN(val)) {
-                            setFormData(prev => ({
+                            setFormData((prev) => ({
                               ...prev,
-                              location: { ...prev.location, lat: val }
+                              location: { ...prev.location, lat: val },
                             }));
                           }
                         }}
@@ -668,9 +817,9 @@ export function ReportIssue({ isOpen, onClose, onSuccess, editMode = false, init
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           if (!isNaN(val)) {
-                            setFormData(prev => ({
+                            setFormData((prev) => ({
                               ...prev,
-                              location: { ...prev.location, lng: val }
+                              location: { ...prev.location, lng: val },
                             }));
                           }
                         }}
