@@ -26,13 +26,6 @@ const roles = [
     color: "from-rose-500 to-pink-500",
   },
   {
-    id: "official",
-    title: "Official",
-    description: "Manage & resolve issues as a municipal representative",
-    icon: Building2,
-    color: "from-violet-500 to-indigo-500",
-  },
-  {
     id: "community",
     title: "Community",
     description: "Represent your neighborhood or organization",

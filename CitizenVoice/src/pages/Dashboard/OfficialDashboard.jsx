@@ -12,6 +12,11 @@ import { ReviewQueue } from "../../components/Dashboard/Official/ReviewQueue";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import { issueService } from "../../services/issueService";
 import { useAuth } from "../../context/Authcontext";
+// Quick Action Modals
+import { CreateWorkOrderModal } from "../../components/Dashboard/Official/CreateWorkOrderModal";
+import { ScheduleInspectionModal } from "../../components/Dashboard/Official/ScheduleInspectionModal";
+import { RequestResourcesModal } from "../../components/Dashboard/Official/RequestResourcesModal";
+import { GenerateReportModal } from "../../components/Dashboard/Official/GenerateReportModal";
 import {
   Inbox,
   Users,
@@ -68,6 +73,12 @@ function DashboardHome() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamLoading, setTeamLoading] = useState(true);
 
+  // Quick Action Modal States
+  const [workOrderModalOpen, setWorkOrderModalOpen] = useState(false);
+  const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
+  const [resourcesModalOpen, setResourcesModalOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+
   useEffect(() => {
     loadStats();
     // Only load team members if user is an admin
@@ -107,11 +118,33 @@ function DashboardHome() {
 
   const handleTakeAction = (issue) => {
     // Navigate to issue management with the issue pre-selected
-    navigate("/dashboard/official/assigned", { state: { selectedIssue: issue } });
+    navigate("/dashboard/official/assigned", {
+      state: { selectedIssue: issue },
+    });
   };
 
-  const handleQuickAction = (action) => {
-    alert(`${action} functionality coming soon.`);
+  const handleQuickAction = (actionLabel) => {
+    switch (actionLabel) {
+      case "Create Work Order":
+        setWorkOrderModalOpen(true);
+        break;
+      case "Schedule Inspection":
+        setInspectionModalOpen(true);
+        break;
+      case "Request Resources":
+        setResourcesModalOpen(true);
+        break;
+      case "Generate Report":
+        setReportModalOpen(true);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleQuickActionSuccess = () => {
+    // Optionally refresh stats after a successful action
+    loadStats();
   };
 
   // Filter priority issues based on selected filter
@@ -185,7 +218,7 @@ function DashboardHome() {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-white">Priority Queue</h2>
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => setPriorityFilter("high")}
               className={`rounded-full px-3 py-1 text-xs transition-all ${
                 priorityFilter === "high"
@@ -195,7 +228,7 @@ function DashboardHome() {
             >
               High Priority
             </button>
-            <button 
+            <button
               onClick={() => setPriorityFilter("overdue")}
               className={`rounded-full px-3 py-1 text-xs transition-all ${
                 priorityFilter === "overdue"
@@ -205,7 +238,7 @@ function DashboardHome() {
             >
               Overdue
             </button>
-            <button 
+            <button
               onClick={() => setPriorityFilter("new")}
               className={`rounded-full px-3 py-1 text-xs transition-all ${
                 priorityFilter === "new"
@@ -230,7 +263,9 @@ function DashboardHome() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-white/40">{issue.issueId}</span>
+                      <span className="text-xs text-white/40">
+                        {issue.issueId}
+                      </span>
                       <span
                         className={`rounded px-1.5 py-0.5 text-xs ${
                           issue.status === "reported"
@@ -245,14 +280,18 @@ function DashboardHome() {
                     <div className="mt-1 flex items-center gap-3 text-xs text-white/40">
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {typeof issue.location === 'string' ? issue.location : issue.location?.address || 'Unknown'}
+                        {typeof issue.location === "string"
+                          ? issue.location
+                          : issue.location?.address || "Unknown"}
                       </span>
                       <span>•</span>
-                      <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(issue.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => handleTakeAction(issue)}
                   className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-rose-600"
                 >
@@ -279,19 +318,27 @@ function DashboardHome() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-white/60">Issues Received</span>
-              <span className="font-semibold text-white">{loading ? "..." : stats.todayActivity?.received || 0}</span>
+              <span className="font-semibold text-white">
+                {loading ? "..." : stats.todayActivity?.received || 0}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-white/60">Issues Resolved</span>
-              <span className="font-semibold text-emerald-400">{loading ? "..." : stats.todayActivity?.resolved || 0}</span>
+              <span className="font-semibold text-emerald-400">
+                {loading ? "..." : stats.todayActivity?.resolved || 0}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-white/60">In Progress</span>
-              <span className="font-semibold text-amber-400">{loading ? "..." : stats.todayActivity?.inProgress || 0}</span>
+              <span className="font-semibold text-amber-400">
+                {loading ? "..." : stats.todayActivity?.inProgress || 0}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-white/60">Escalated</span>
-              <span className="font-semibold text-rose-400">{loading ? "..." : stats.todayActivity?.escalated || 0}</span>
+              <span className="font-semibold text-rose-400">
+                {loading ? "..." : stats.todayActivity?.escalated || 0}
+              </span>
             </div>
           </div>
         </div>
@@ -339,13 +386,16 @@ function DashboardHome() {
                           className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0a0a0a] ${
                             member.status === "active"
                               ? "bg-emerald-500"
-                              : member.status === "busy" || (member.stats?.assigned > 10)
+                              : member.status === "busy" ||
+                                member.stats?.assigned > 10
                               ? "bg-amber-500"
                               : "bg-gray-500"
                           }`}
                         />
                       </div>
-                      <span className="text-sm text-white">{member.name || member.username}</span>
+                      <span className="text-sm text-white">
+                        {member.name || member.username}
+                      </span>
                     </div>
                     <span className="text-sm text-white/40">
                       {member.stats?.assigned || 0} tasks
@@ -381,6 +431,30 @@ function DashboardHome() {
           ))}
         </div>
       </div>
+
+      {/* Quick Action Modals */}
+      <CreateWorkOrderModal
+        isOpen={workOrderModalOpen}
+        onClose={() => setWorkOrderModalOpen(false)}
+        onSuccess={handleQuickActionSuccess}
+        teamMembers={teamMembers}
+      />
+      <ScheduleInspectionModal
+        isOpen={inspectionModalOpen}
+        onClose={() => setInspectionModalOpen(false)}
+        onSuccess={handleQuickActionSuccess}
+        teamMembers={teamMembers}
+      />
+      <RequestResourcesModal
+        isOpen={resourcesModalOpen}
+        onClose={() => setResourcesModalOpen(false)}
+        onSuccess={handleQuickActionSuccess}
+      />
+      <GenerateReportModal
+        isOpen={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        onSuccess={handleQuickActionSuccess}
+      />
     </div>
   );
 }
@@ -399,9 +473,9 @@ function MapPage() {
           </p>
         </div>
       </div>
-      <HeatmapViewer 
-        userRole="official" 
-        defaultCenter={[28.6139, 77.2090]}
+      <HeatmapViewer
+        userRole="official"
+        defaultCenter={[28.6139, 77.209]}
         defaultZoom={12}
         height="calc(100vh - 250px)"
       />
@@ -422,14 +496,16 @@ function SettingsPage() {
 
   const handleSaveSettings = async () => {
     setSaving(true);
-    
+
     // TODO: Backend team - Implement settings endpoint:
     // PATCH /api/officials/settings
     // Body: { department, notifications }
-    
+
     setTimeout(() => {
       setSaving(false);
-      alert("Settings saved successfully!\n\nNote: Backend integration pending.");
+      alert(
+        "Settings saved successfully!\n\nNote: Backend integration pending."
+      );
     }, 1000);
   };
 
@@ -461,7 +537,10 @@ function SettingsPage() {
                 { key: "teamMessages", label: "Team messages" },
                 { key: "dailySummary", label: "Daily summary" },
               ].map((item) => (
-                <label key={item.key} className="flex items-center gap-2 cursor-pointer">
+                <label
+                  key={item.key}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
                   <input
                     type="checkbox"
                     checked={notifications[item.key]}

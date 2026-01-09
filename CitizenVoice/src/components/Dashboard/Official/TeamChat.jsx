@@ -354,10 +354,9 @@ const TeamChat = () => {
   // Direct chat mode - show only the chat section (no sidebar)
   if (directChatMode && selectedConversation) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="flex h-screen">
-          {/* Chat Area - Full Width */}
-          <div className="flex-1 flex flex-col">
+      <div className="flex h-[calc(100vh-4rem)]">
+        {/* Chat Area - Full Width */}
+        <div className="flex-1 flex flex-col">
             {/* Chat Header */}
             <div className="p-4 border-b border-white/10 bg-white/5 backdrop-blur-xl">
               <div className="flex items-center justify-between">
@@ -369,11 +368,11 @@ const TeamChat = () => {
                     <ArrowLeft className="w-5 h-5 text-white" />
                   </button>
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 to-violet-500 flex items-center justify-center text-white text-sm font-semibold">
                       {selectedConversation.avatar || selectedConversation.name?.slice(0, 2).toUpperCase()}
                     </div>
                     {isOnline(selectedConversation.recipientId) && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900"></div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0a0a0a]"></div>
                     )}
                   </div>
                   <div>
@@ -388,8 +387,8 @@ const TeamChat = () => {
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <MessageSquare className="w-16 h-16 text-purple-400/50 mb-4" />
-                  <p className="text-gray-400">No messages yet. Start the conversation!</p>
+                  <MessageSquare className="w-12 h-12 text-rose-400/50 mb-4" />
+                  <p className="text-white/60">No messages yet. Start the conversation!</p>
                 </div>
               ) : (
                 messages.map((msg, index) => {
@@ -403,8 +402,8 @@ const TeamChat = () => {
                     >
                       <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-2xl ${
                         isMe 
-                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-md' 
-                          : 'bg-white/10 text-white rounded-bl-md'
+                          ? 'bg-gradient-to-r from-rose-500 to-violet-500 text-white rounded-br-md' 
+                          : 'border border-white/10 bg-white/5 text-white rounded-bl-md'
                       }`}>
                         <p>{msg.message}</p>
                         <div className={`flex items-center gap-1 mt-1 text-xs ${isMe ? 'text-white/70 justify-end' : 'text-gray-400'}`}>
@@ -421,11 +420,11 @@ const TeamChat = () => {
 
             {/* Typing Indicator */}
             {typingUsers.includes(selectedConversation.recipientId) && (
-              <div className="px-4 py-2 text-sm text-purple-300 flex items-center gap-2">
+              <div className="px-4 py-2 text-sm text-rose-300 flex items-center gap-2">
                 <span className="flex gap-1">
-                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                 </span>
                 <span>{selectedConversation.name} is typing...</span>
               </div>
@@ -443,12 +442,12 @@ const TeamChat = () => {
                     handleTyping();
                   }}
                   placeholder="Type your message..."
-                  className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-all"
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/40 outline-none transition-all focus:border-rose-500/50"
                 />
                 <button
                   type="submit"
                   disabled={!newMessage.trim() || sendingMessage}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-violet-500 px-6 py-3 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-rose-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {sendingMessage ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -463,61 +462,59 @@ const TeamChat = () => {
             </div>
           </div>
         </div>
-      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="flex h-screen">
-        {/* Conversations Sidebar */}
-        <div className={`w-full md:w-80 lg:w-96 bg-white/5 backdrop-blur-xl border-r border-white/10 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
-          {/* Header */}
-          <div className="p-4 border-b border-white/10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => navigate(-1)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <ArrowLeft className="w-5 h-5 text-white" />
-                </button>
-                <h1 className="text-xl font-bold text-white">Conversations</h1>
-              </div>
-              <div className="relative">
-                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-              </div>
+    <div className="flex h-[calc(100vh-4rem)]">
+      {/* Conversations Sidebar */}
+      <div className={`w-full md:w-80 lg:w-96 border-r border-white/10 bg-[#0a0a0a] flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
+        {/* Header */}
+        <div className="p-4 border-b border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="rounded-lg p-2 transition-all hover:bg-white/10"
+              >
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+              <h1 className="text-lg font-semibold text-white">Conversations</h1>
             </div>
-            
-            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
-              />
+              <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
             </div>
           </div>
+            
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <input
+              type="text"
+              placeholder="Search conversations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-white placeholder-white/40 outline-none transition-all focus:border-rose-500/50 focus:ring-2 focus:ring-rose-500/20"
+            />
+          </div>
+        </div>
 
-          {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
-              </div>
-            ) : filteredConversations.length === 0 ? (
-              <div className="text-center py-12 px-4">
-                <MessageSquare className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                <p className="text-gray-400">No conversations yet</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Add team members from Team Management to start chatting
-                </p>
-                <button
-                  onClick={() => navigate('/dashboard/official/team')}
-                  className="mt-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm rounded-lg hover:shadow-lg transition-all"
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
+            </div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="px-4 py-12 text-center">
+              <MessageSquare className="mx-auto mb-3 h-12 w-12 text-white/40" />
+              <p className="text-white/60">No conversations yet</p>
+              <p className="mt-1 text-sm text-white/40">
+                Add team members from Team Management to start chatting
+              </p>
+              <button
+                onClick={() => navigate('/dashboard/official/team')}
+                className="mt-4 rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg"
                 >
                   Go to Team Management
                 </button>
@@ -534,11 +531,11 @@ const TeamChat = () => {
                     whileHover={{ x: 4 }}
                   >
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 to-violet-500 flex items-center justify-center text-white text-sm font-semibold">
                         {conv.avatar || conv.name?.slice(0, 2).toUpperCase()}
                       </div>
                       {isOnline(conv.recipientId) && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-900"></div>
+                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a]"></div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -549,7 +546,7 @@ const TeamChat = () => {
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-gray-400 truncate">{conv.lastMessage || 'No messages yet'}</p>
                         {conv.unreadCount > 0 && (
-                          <span className="min-w-[20px] h-5 flex items-center justify-center bg-purple-500 text-white text-xs rounded-full px-1.5">
+                          <span className="min-w-5 h-5 flex items-center justify-center bg-rose-500 text-white text-xs rounded-full px-1.5">
                             {conv.unreadCount}
                           </span>
                         )}
@@ -566,54 +563,54 @@ const TeamChat = () => {
         <div className={`flex-1 flex flex-col ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
           {selectedConversation ? (
             <>
-              {/* Chat Header */}
-              <div className="p-4 border-b border-white/10 bg-white/5 backdrop-blur-xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setSelectedConversation(null)}
-                      className="md:hidden p-2 hover:bg-white/10 rounded-lg transition-all"
-                    >
-                      <ArrowLeft className="w-5 h-5 text-white" />
-                    </button>
-                    <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-                        {selectedConversation.avatar || selectedConversation.name?.slice(0, 2).toUpperCase()}
-                      </div>
-                      {isOnline(selectedConversation.recipientId) && (
-                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-800"></div>
+            {/* Chat Header */}
+            <div className="border-b border-white/10 bg-white/5 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedConversation(null)}
+                    className="rounded-lg p-2 transition-all hover:bg-white/10 md:hidden"
+                  >
+                    <ArrowLeft className="w-5 h-5 text-white" />
+                  </button>
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 to-violet-500 flex items-center justify-center text-white text-sm font-semibold">
+                      {selectedConversation.avatar || selectedConversation.name?.slice(0, 2).toUpperCase()}
+                    </div>
+                    {isOnline(selectedConversation.recipientId) && (
+                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a]"></div>
                       )}
                     </div>
                     <div>
-                      <h2 className="font-semibold text-white">{selectedConversation.name}</h2>
-                      <p className="text-xs text-gray-400">
+                      <h2 className="text-sm font-semibold text-white">{selectedConversation.name}</h2>
+                      <p className="text-xs text-white/60">
                         {isOnline(selectedConversation.recipientId) ? 'Online' : selectedConversation.email}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="p-2 hover:bg-white/10 rounded-lg transition-all text-gray-400 hover:text-white">
-                      <Phone className="w-5 h-5" />
+                    <button className="rounded-lg p-2 text-white/60 transition-all hover:bg-white/10 hover:text-white">
+                      <Phone className="w-4 h-4" />
                     </button>
-                    <button className="p-2 hover:bg-white/10 rounded-lg transition-all text-gray-400 hover:text-white">
-                      <Video className="w-5 h-5" />
+                    <button className="rounded-lg p-2 text-white/60 transition-all hover:bg-white/10 hover:text-white">
+                      <Video className="w-4 h-4" />
                     </button>
-                    <button className="p-2 hover:bg-white/10 rounded-lg transition-all text-gray-400 hover:text-white">
-                      <MoreVertical className="w-5 h-5" />
+                    <button className="rounded-lg p-2 text-white/60 transition-all hover:bg-white/10 hover:text-white">
+                      <MoreVertical className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center mb-4">
-                      <MessageSquare className="w-10 h-10 text-purple-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-1">Start a conversation</h3>
-                    <p className="text-gray-400 text-sm">Send a message to {selectedConversation.name}</p>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="w-16 h-16 rounded-full border border-white/10 bg-white/5 flex items-center justify-center mb-4">
+                    <MessageSquare className="w-8 h-8 text-rose-400" />
+                  </div>
+                  <h3 className="text-base font-semibold text-white mb-1">Start a conversation</h3>
+                  <p className="text-white/60 text-sm">Send a message to {selectedConversation.name}</p>
                   </div>
                 ) : (
                   messages.map((msg, idx) => {
@@ -638,8 +635,8 @@ const TeamChat = () => {
                           <div
                             className={`max-w-[70%] rounded-2xl px-4 py-2 ${
                               isOwn
-                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-md'
-                                : 'bg-white/10 text-gray-200 rounded-bl-md'
+                                ? 'bg-gradient-to-r from-rose-500 to-violet-500 text-white rounded-br-md'
+                                : 'border border-white/10 bg-white/5 text-white rounded-bl-md'
                             } ${msg.pending ? 'opacity-70' : ''}`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
@@ -668,18 +665,18 @@ const TeamChat = () => {
 
               {/* Typing Indicator */}
               {selectedConversation && typingUsers.includes(selectedConversation.recipientId) && (
-                <div className="px-4 py-2 text-sm text-purple-300 flex items-center gap-2">
+                <div className="px-4 py-2 text-sm text-rose-300 flex items-center gap-2">
                   <span className="flex gap-1">
-                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                    <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                   </span>
                   <span>{selectedConversation.name} is typing...</span>
                 </div>
               )}
 
               {/* Message Input */}
-              <div className="p-4 border-t border-white/10 bg-white/5">
+              <div className="p-4 border-t border-white/10">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-3">
                   <input
                     ref={inputRef}
@@ -690,12 +687,12 @@ const TeamChat = () => {
                       handleTyping();
                     }}
                     placeholder="Type your message..."
-                    className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-all"
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/40 outline-none transition-all focus:border-rose-500/50"
                   />
                   <button
                     type="submit"
                     disabled={!newMessage.trim() || sendingMessage}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-violet-500 px-6 py-3 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-rose-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {sendingMessage ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -710,19 +707,18 @@ const TeamChat = () => {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center mb-6">
-                <MessageSquare className="w-12 h-12 text-purple-400" />
+            <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5">
+                <MessageSquare className="h-10 w-10 text-rose-400" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Team Chat</h2>
-              <p className="text-gray-400 max-w-md">
+              <h2 className="mb-2 text-xl font-semibold text-white">Team Chat</h2>
+              <p className="max-w-md text-white/60">
                 Select a conversation from the sidebar to start chatting with your team members
               </p>
             </div>
           )}
         </div>
       </div>
-    </div>
   );
 };
 
