@@ -24,7 +24,9 @@ class IssueService {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to create issue' }));
+      const error = await response
+        .json()
+        .catch(() => ({ message: "Failed to create issue" }));
       throw new Error(error.message || "Failed to create issue");
     }
 
@@ -77,12 +79,12 @@ class IssueService {
   async updateIssue(id, updateData) {
     // Check if updateData is FormData (for image updates) or regular object
     const isFormData = updateData instanceof FormData;
-    
+
     const requestOptions = {
       method: "PUT",
       credentials: "include",
     };
-    
+
     if (!isFormData) {
       requestOptions.headers = {
         "Content-Type": "application/json",
@@ -93,7 +95,10 @@ class IssueService {
       requestOptions.body = updateData;
     }
 
-    const response = await fetch(`${API_BASE_URL}/issues/${id}`, requestOptions);
+    const response = await fetch(
+      `${API_BASE_URL}/issues/${id}`,
+      requestOptions
+    );
 
     if (!response.ok) {
       throw new Error("Failed to update issue");
@@ -357,9 +362,12 @@ class IssueService {
 
   // Community: Get community leaderboard (top contributors)
   async getCommunityLeaderboard(limit = 10) {
-    const response = await fetch(`${API_BASE_URL}/community/leaderboard?limit=${limit}`, {
-      credentials: "include",
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/community/leaderboard?limit=${limit}`,
+      {
+        credentials: "include",
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to fetch community leaderboard");
@@ -383,7 +391,7 @@ class IssueService {
   }
 
   // === Team Management APIs ===
-  
+
   // Send message to team member
   async sendMessageToMember(recipientId, message) {
     const response = await fetch(`${API_BASE_URL}/officials/message`, {
@@ -404,9 +412,12 @@ class IssueService {
 
   // Get messages with team member
   async getMessages(memberId) {
-    const response = await fetch(`${API_BASE_URL}/officials/messages/${memberId}`, {
-      credentials: "include",
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/officials/messages/${memberId}`,
+      {
+        credentials: "include",
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to fetch messages");
@@ -417,10 +428,13 @@ class IssueService {
 
   // Mark messages as read
   async markMessagesRead(memberId) {
-    const response = await fetch(`${API_BASE_URL}/officials/messages/${memberId}/mark-read`, {
-      method: "PATCH",
-      credentials: "include",
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/officials/messages/${memberId}/mark-read`,
+      {
+        method: "PATCH",
+        credentials: "include",
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to mark messages as read");
@@ -505,8 +519,47 @@ class IssueService {
 
   // Get reports for a specific issue
   async getIssueReports(issueId) {
+    const response = await fetch(`${API_BASE_URL}/issues/${issueId}/reports`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch issue reports");
+    }
+
+    return response.json();
+  }
+
+  // ============== QUICK ACTIONS ==============
+
+  // Create work order
+  async createWorkOrder(workOrderData) {
     const response = await fetch(
-      `${API_BASE_URL}/issues/${issueId}/reports`,
+      `${API_BASE_URL}/officials/quick-actions/work-order`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(workOrderData),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to create work order");
+    }
+
+    return response.json();
+  }
+
+  // Get work orders
+  async getWorkOrders(filters = {}) {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/work-orders?${params}`,
       {
         credentials: "include",
       }
@@ -514,7 +567,210 @@ class IssueService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || "Failed to fetch issue reports");
+      throw new Error(errorData.message || "Failed to fetch work orders");
+    }
+
+    return response.json();
+  }
+
+  // Update work order
+  async updateWorkOrder(id, updates) {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/work-orders/${id}`,
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updates),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to update work order");
+    }
+
+    return response.json();
+  }
+
+  // Schedule inspection
+  async scheduleInspection(inspectionData) {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/inspection`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(inspectionData),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to schedule inspection");
+    }
+
+    return response.json();
+  }
+
+  // Get inspections
+  async getInspections(filters = {}) {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/inspections?${params}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch inspections");
+    }
+
+    return response.json();
+  }
+
+  // Update inspection
+  async updateInspection(id, updates) {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/inspections/${id}`,
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updates),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to update inspection");
+    }
+
+    return response.json();
+  }
+
+  // Request resources
+  async requestResources(resourceData) {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/resources`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(resourceData),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to request resources");
+    }
+
+    return response.json();
+  }
+
+  // Get resource requests
+  async getResourceRequests(filters = {}) {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/resources?${params}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch resource requests");
+    }
+
+    return response.json();
+  }
+
+  // Review resource request
+  async reviewResourceRequest(id, reviewData) {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/resources/${id}`,
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(reviewData),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to review resource request");
+    }
+
+    return response.json();
+  }
+
+  // Generate report
+  async generateAnalyticsReport(reportData) {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/report`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(reportData),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to generate report");
+    }
+
+    return response.json();
+  }
+
+  // Get generated reports
+  async getGeneratedReports(filters = {}) {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/reports?${params}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch generated reports");
+    }
+
+    return response.json();
+  }
+
+  // Get single generated report
+  async getGeneratedReport(id) {
+    const response = await fetch(
+      `${API_BASE_URL}/officials/quick-actions/reports/${id}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch report");
     }
 
     return response.json();
