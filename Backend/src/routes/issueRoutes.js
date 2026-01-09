@@ -9,7 +9,9 @@ import {
   upvoteIssue,
   deleteIssue,
   getIssue,
-  updateIssue
+  updateIssue,
+  addComment,
+  getComments
 } from '../controllers/issueController.js';
 import { submitReport, getIssueReports } from '../controllers/reportController.js';
 import { protect, requireProfileComplete, restrictTo } from '../middleware/authMiddleware.js';
@@ -33,6 +35,10 @@ router.delete('/:issueId', deleteIssue);
 
 // Issue actions
 router.post('/:issueId/upvote', upvoteIssue);
+
+// Comments
+router.post('/:issueId/comments', addComment);
+router.get('/:issueId/comments', getComments);
 
 // Report submission and retrieval (for team members)
 router.post('/:issueId/reports', uploadIssueImages, submitReport);

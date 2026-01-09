@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "../../../lib/utils";
 import { issueService } from "../../../services/issueService";
+import { IssueDetailModal } from "./IssueDetailModal";
 import {
   Search,
   Filter,
@@ -42,13 +43,17 @@ const categoryIcons = {
   other: "📋",
 };
 
-const neighborhoods = [
-  { value: "all", label: "All Neighborhoods" },
-  { value: "downtown", label: "Downtown" },
-  { value: "northside", label: "Northside" },
-  { value: "westend", label: "Westend" },
-  { value: "eastside", label: "Eastside" },
-  { value: "suburbs", label: "Suburbs" },
+// Indian states for filtering
+const indianStates = [
+  { value: "all", label: "All States" },
+  { value: "Andhra Pradesh", label: "Andhra Pradesh" },
+  { value: "Delhi", label: "Delhi" },
+  { value: "Karnataka", label: "Karnataka" },
+  { value: "Maharashtra", label: "Maharashtra" },
+  { value: "Tamil Nadu", label: "Tamil Nadu" },
+  { value: "Uttar Pradesh", label: "Uttar Pradesh" },
+  { value: "West Bengal", label: "West Bengal" },
+  // Add more states as needed
 ];
 
 export function AreaIssues({ onViewIssue }) {
@@ -57,21 +62,32 @@ export function AreaIssues({ onViewIssue }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState(null);
   const [filters, setFilters] = useState({
-    neighborhood: "all",
+    state: "all",
+    district: "",
     category: "all",
     status: "all",
   });
 
-  // Fetch issues on mount
+  // Fetch issues on mount and when filters change
   useEffect(() => {
     fetchIssues();
-  }, []);
+  }, [filters]);
 
   const fetchIssues = async () => {
     setLoading(true);
     try {
-      const response = await issueService.getIssues({ limit: 100 });
+      // Build query params with filters
+      const params = {
+        limit: 100,
+        ...(filters.state !== "all" && { state: filters.state }),
+        ...(filters.district && { district: filters.district }),
+        ...(filters.category !== "all" && { category: filters.category }),
+        ...(filters.status !== "all" && { status: filters.status }),
+      };
+      
+      const response = await issueService.getAllIssues(params);
       const fetchedIssues = response?.data?.issues || [];
       
       // Transform issues to match expected format
@@ -97,17 +113,8 @@ export function AreaIssues({ onViewIssue }) {
     const matchesSearch =
       issue.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       issue.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesNeighborhood =
-      filters.neighborhood === "all" ||
-      issue.location?.neighborhood?.toLowerCase() === filters.neighborhood;
-    const matchesCategory =
-      filters.category === "all" || issue.category === filters.category;
-    const matchesStatus =
-      filters.status === "all" || issue.status === filters.status;
 
-    return (
-      matchesSearch && matchesNeighborhood && matchesCategory && matchesStatus
-    );
+    return matchesSearch;
   });
 
   const formatTimeAgo = (date) => {
@@ -118,6 +125,36 @@ export function AreaIssues({ onViewIssue }) {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     if (hours > 0) return `${hours}h ago`;
     return "Just now";
+  };
+
+  const handleIssueClick = (issue) => {
+    setSelectedIssue(issue);
+    if (onViewIssue) {
+      onViewIssue(issue);
+    }
+  };
+
+  const handleIssueUpdate = (updatedIssue) => {
+    // Update the issue in the local list
+    // Transform the updated issue to match the display format
+    const transformedUpdate = {
+      ...updatedIssue,
+      id: updatedIssue._id,
+      upvotes: Array.isArray(updatedIssue.upvotes) ? updatedIssue.upvotes.length : (updatedIssue.upvotes || 0),
+      comments: Array.isArray(updatedIssue.comments) ? updatedIssue.comments.length : (updatedIssue.comments || 0),
+      verifications: updatedIssue.verifiedCount || 0,
+      image: updatedIssue.images?.[0] || null,
+      reporter: updatedIssue.reportedBy?.username || "Anonymous",
+    };
+    
+    setIssues(prevIssues =>
+      prevIssues.map(issue =>
+        issue._id === updatedIssue._id ? transformedUpdate : issue
+      )
+    );
+    
+    // Also update the selected issue in the modal with transformed data
+    setSelectedIssue(transformedUpdate);
   };
 
   if (loading) {
@@ -197,21 +234,35 @@ export function AreaIssues({ onViewIssue }) {
         <div className="flex flex-wrap gap-4 rounded-lg border border-white/10 bg-white/5 p-4">
           <div>
             <label className="mb-1 block text-xs text-white/60">
-              Neighborhood
+              State
             </label>
             <select
-              value={filters.neighborhood}
+              value={filters.state}
               onChange={(e) =>
-                setFilters({ ...filters, neighborhood: e.target.value })
+                setFilters({ ...filters, state: e.target.value, district: "" })
               }
               className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
             >
-              {neighborhoods.map((n) => (
-                <option key={n.value} value={n.value} className="bg-black">
-                  {n.label}
+              {indianStates.map((s) => (
+                <option key={s.value} value={s.value} className="bg-black">
+                  {s.label}
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-white/60">
+              District
+            </label>
+            <input
+              type="text"
+              value={filters.district}
+              onChange={(e) =>
+                setFilters({ ...filters, district: e.target.value })
+              }
+              placeholder="Enter district"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/40"
+            />
           </div>
           <div>
             <label className="mb-1 block text-xs text-white/60">Category</label>
@@ -279,7 +330,7 @@ export function AreaIssues({ onViewIssue }) {
           {filteredIssues.map((issue) => (
             <div
               key={issue.id}
-              onClick={() => onViewIssue?.(issue)}
+              onClick={() => handleIssueClick(issue)}
               className={cn(
                 "group cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all hover:border-rose-500/30",
                 viewMode === "list" && "flex items-center gap-4 p-4"
@@ -338,7 +389,7 @@ export function AreaIssues({ onViewIssue }) {
                 <div className="flex items-center gap-3 text-xs text-white/40">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
-                    {issue.location.neighborhood}
+                    {issue.location?.district || issue.location?.city || "Unknown"}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
@@ -373,6 +424,15 @@ export function AreaIssues({ onViewIssue }) {
           </h3>
           <p className="text-sm text-white/60">Try adjusting your filters</p>
         </div>
+      )}
+
+      {/* Issue Detail Modal */}
+      {selectedIssue && (
+        <IssueDetailModal
+          issue={selectedIssue}
+          onClose={() => setSelectedIssue(null)}
+          onUpdate={handleIssueUpdate}
+        />
       )}
     </div>
   );

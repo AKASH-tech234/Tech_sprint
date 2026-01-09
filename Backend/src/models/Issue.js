@@ -40,7 +40,8 @@ const issueSchema = new mongoose.Schema({
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },
     city: String,
-    state: String
+    state: String,
+    district: String
   },
   images: [{
     type: String  // URLs to uploaded images

@@ -123,17 +123,6 @@ const HeatmapViewer = ({
     }
   };
 
-  // Prepare heatmap data
-  const heatmapData = useMemo(() => {
-    return issues
-      .filter(issue => issue.location?.lat && issue.location?.lng)
-      .map(issue => ({
-        lat: issue.location.lat,
-        lng: issue.location.lng,
-        intensity: getPriorityWeight(issue.priority, issue.status)
-      }));
-  }, [issues]);
-
   // Get intensity based on priority and status
   const getPriorityWeight = (priority, status) => {
     let weight = 0.5;
@@ -149,6 +138,17 @@ const HeatmapViewer = ({
     
     return weight;
   };
+
+  // Prepare heatmap data
+  const heatmapData = useMemo(() => {
+    return issues
+      .filter(issue => issue.location?.lat && issue.location?.lng)
+      .map(issue => ({
+        lat: issue.location.lat,
+        lng: issue.location.lng,
+        intensity: getPriorityWeight(issue.priority, issue.status)
+      }));
+  }, [issues]);
 
   // Filter controls
   const handleFilterChange = (filterType, value) => {
@@ -218,50 +218,48 @@ const HeatmapViewer = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-      {/* Header with title and controls */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <MapPin className="w-6 h-6" />
-              {userRole === 'citizen' && 'Local Issues Heatmap'}
-              {userRole === 'official' && 'Official Issues Dashboard Map'}
-              {userRole === 'community' && 'Community Issues Overview'}
-            </h2>
-            <p className="text-blue-100 text-sm mt-1">
-              {issues.length} issues displayed
-            </p>
+    <div className="bg-gradient-to-b from-gray-900 via-violet-900 to-black text-white rounded-xl overflow-hidden shadow-2xl">
+      <style>{`.heatmap-select, .heatmap-select option { background-color: #1b1229; color: #ffffff; }
+        .heatmap-select { -webkit-appearance: none; appearance: none; }
+        `}</style>
+      {/* Header Banner (hero-like) */}
+      <div className="px-6 py-8 lg:py-10 bg-gradient-to-r from-violet-700 via-rose-600 to-indigo-700">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="h-14 w-14 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-sm">
+              <MapPin className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl lg:text-4xl font-extrabold leading-tight">
+                {userRole === 'citizen' && 'Your Local Issues Map'}
+                {userRole === 'official' && 'Official Dashboard Map'}
+                {userRole === 'community' && 'Community Issues Overview'}
+              </h1>
+              <p className="mt-2 text-white/80">{issues.length} issues displayed</p>
+            </div>
           </div>
-          
-          {/* View mode toggle */}
-          <div className="flex gap-2">
+
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setViewMode('heatmap')}
-              className={`px-4 py-2 rounded-lg transition-all ${
-                viewMode === 'heatmap'
-                  ? 'bg-white text-blue-600 shadow-md'
-                  : 'bg-blue-500 hover:bg-blue-400'
+              className={`px-4 py-2 rounded-full font-semibold transition-shadow ${
+                viewMode === 'heatmap' ? 'bg-white text-violet-700 shadow-2xl' : 'bg-white/10 text-white/90 hover:bg-white/20'
               }`}
             >
               Heatmap
             </button>
             <button
               onClick={() => setViewMode('markers')}
-              className={`px-4 py-2 rounded-lg transition-all ${
-                viewMode === 'markers'
-                  ? 'bg-white text-blue-600 shadow-md'
-                  : 'bg-blue-500 hover:bg-blue-400'
+              className={`px-4 py-2 rounded-full font-semibold transition-shadow ${
+                viewMode === 'markers' ? 'bg-white text-violet-700 shadow-2xl' : 'bg-white/10 text-white/90 hover:bg-white/20'
               }`}
             >
               Markers
             </button>
             <button
               onClick={() => setViewMode('clusters')}
-              className={`px-4 py-2 rounded-lg transition-all ${
-                viewMode === 'clusters'
-                  ? 'bg-white text-blue-600 shadow-md'
-                  : 'bg-blue-500 hover:bg-blue-400'
+              className={`px-4 py-2 rounded-full font-semibold transition-shadow ${
+                viewMode === 'clusters' ? 'bg-white text-violet-700 shadow-2xl' : 'bg-white/10 text-white/90 hover:bg-white/20'
               }`}
             >
               Clusters
@@ -270,18 +268,15 @@ const HeatmapViewer = ({
         </div>
       </div>
 
-      {/* Filters and Stats */}
-      <div className="bg-gray-50 border-b p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-          {/* Status Filter */}
+      {/* Filters & Stats Panel */}
+      <div className="max-w-7xl mx-auto px-6 -mt-6 mb-6">
+        <div className="rounded-xl border border-white/6 bg-white/3 backdrop-blur-md p-4 grid gap-4 lg:grid-cols-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
+            <label className="block text-xs text-white/80 mb-1">Status</label>
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-white heatmap-select"
             >
               <option value="all">All Status</option>
               <option value="reported">Reported</option>
@@ -292,15 +287,12 @@ const HeatmapViewer = ({
             </select>
           </div>
 
-          {/* Category Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category
-            </label>
+            <label className="block text-xs text-white/80 mb-1">Category</label>
             <select
               value={filters.category}
               onChange={(e) => handleFilterChange('category', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-white heatmap-select"
             >
               <option value="all">All Categories</option>
               <option value="pothole">Pothole</option>
@@ -314,15 +306,12 @@ const HeatmapViewer = ({
             </select>
           </div>
 
-          {/* Priority Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Priority
-            </label>
+            <label className="block text-xs text-white/80 mb-1">Priority</label>
             <select
               value={filters.priority}
               onChange={(e) => handleFilterChange('priority', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-white heatmap-select"
             >
               <option value="all">All Priorities</option>
               <option value="high">High</option>
@@ -331,134 +320,68 @@ const HeatmapViewer = ({
             </select>
           </div>
 
-          {/* Locate Me Button */}
           <div className="flex items-end">
             <button
               onClick={locateUser}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-gradient-to-r from-rose-500 to-violet-500 px-4 py-2 font-semibold text-white shadow-lg flex items-center justify-center gap-2"
             >
               <Navigation size={18} />
               Locate Me
             </button>
           </div>
         </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {stats.map(({ status, count }) => {
-            const { color, bg, Icon } = getStatusInfo(status);
-            return (
-              <div key={status} className={`${bg} rounded-lg p-3`}>
-                <div className="flex items-center gap-2">
-                  <Icon className={`${color} w-5 h-5`} />
-                  <div>
-                    <p className="text-xs text-gray-600 capitalize">{status}</p>
-                    <p className={`text-lg font-bold ${color}`}>{count}</p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       {/* Map Container */}
-      <div style={{ height, position: 'relative' }}>
-        <MapContainer
-          center={mapCenter}
-          zoom={mapZoom}
-          style={{ height: '100%', width: '100%' }}
-          scrollWheelZoom={true}
-        >
-          <MapController center={mapCenter} zoom={mapZoom} />
-          
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-
-          {/* Heatmap Layer */}
-          {viewMode === 'heatmap' && heatmapData.length > 0 && (
-            <HeatmapLayerComponent
-              points={heatmapData}
-              options={{
-                radius: 25,
-                blur: 15,
-                max: 1.0,
-                gradient: {
-                  0.0: 'blue',
-                  0.5: 'lime',
-                  0.7: 'yellow',
-                  0.85: 'orange',
-                  1.0: 'red'
-                }
-              }}
+      <div className="max-w-7xl mx-auto px-6 pb-8">
+        <div className="rounded-xl overflow-hidden border border-white/6 shadow-2xl" style={{ height, background: '#0b1220' }}>
+          <MapContainer
+            center={mapCenter}
+            zoom={mapZoom}
+            style={{ height: '100%', width: '100%' }}
+            scrollWheelZoom={true}
+          >
+            <MapController center={mapCenter} zoom={mapZoom} />
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-          )}
 
-          {/* Regular Markers */}
-          {viewMode === 'markers' &&
-            issues
-              .filter(issue => issue.location?.lat && issue.location?.lng)
-              .map((issue) => (
-                <Marker
-                  key={issue._id}
-                  position={[issue.location.lat, issue.location.lng]}
-                  icon={createCustomIcon(issue.status)}
-                  eventHandlers={{
-                    click: () => setSelectedIssue(issue),
-                  }}
-                >
-                  <Popup>
-                    <div className="p-2 min-w-[200px]">
-                      <h3 className="font-bold text-lg mb-2">{issue.title}</h3>
-                      <div className="space-y-1 text-sm">
-                        <p className="text-gray-600">{issue.description?.substring(0, 100)}...</p>
-                        <div className="flex gap-2 mt-2">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            issue.status === 'reported' ? 'bg-red-100 text-red-700' :
-                            issue.status === 'acknowledged' ? 'bg-yellow-100 text-yellow-700' :
-                            issue.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
-                            {issue.status}
-                          </span>
-                          <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
-                            {issue.category}
-                          </span>
-                        </div>
-                        {issue.images && issue.images.length > 0 && (
-                          <img 
-                            src={issue.images[0]} 
-                            alt="Issue" 
-                            className="w-full h-24 object-cover rounded mt-2"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
+            {/* Heatmap Layer */}
+            {viewMode === 'heatmap' && heatmapData.length > 0 && (
+              <HeatmapLayerComponent
+                points={heatmapData}
+                options={{
+                  radius: 25,
+                  blur: 15,
+                  max: 1.0,
+                  gradient: {
+                    0.0: 'blue',
+                    0.5: 'lime',
+                    0.7: 'yellow',
+                    0.85: 'orange',
+                    1.0: 'red'
+                  }
+                }}
+              />
+            )}
 
-          {/* Clustered Markers */}
-          {viewMode === 'clusters' && (
-            <MarkerClusterGroup chunkedLoading>
-              {issues
+            {/* Markers & Clusters (kept intact) */}
+            {viewMode === 'markers' &&
+              issues
                 .filter(issue => issue.location?.lat && issue.location?.lng)
                 .map((issue) => (
                   <Marker
-                    key={issue._id}
+                    key={issue._id || issue.id}
                     position={[issue.location.lat, issue.location.lng]}
                     icon={createCustomIcon(issue.status)}
-                    eventHandlers={{
-                      click: () => setSelectedIssue(issue),
-                    }}
+                    eventHandlers={{ click: () => setSelectedIssue(issue) }}
                   >
                     <Popup>
-                      <div className="p-2 min-w-[200px]">
+                      <div className="p-2 min-w-[220px]">
                         <h3 className="font-bold text-lg mb-2">{issue.title}</h3>
-                        <div className="space-y-1 text-sm">
-                          <p className="text-gray-600">{issue.description?.substring(0, 100)}...</p>
+                        <div className="space-y-1 text-sm text-gray-100">
+                          <p className="text-white/70">{issue.description?.substring(0, 100)}...</p>
                           <div className="flex gap-2 mt-2">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
                               issue.status === 'reported' ? 'bg-red-100 text-red-700' :
@@ -468,43 +391,84 @@ const HeatmapViewer = ({
                             }`}>
                               {issue.status}
                             </span>
-                            <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
+                            <span className="px-2 py-1 rounded text-xs bg-white/10 text-white/90">
                               {issue.category}
                             </span>
                           </div>
+                          {issue.images && issue.images.length > 0 && (
+                            <img src={issue.images[0]} alt="Issue" className="w-full h-24 object-cover rounded mt-2" />
+                          )}
                         </div>
                       </div>
                     </Popup>
                   </Marker>
                 ))}
-            </MarkerClusterGroup>
-          )}
-        </MapContainer>
+
+            {viewMode === 'clusters' && (
+              <MarkerClusterGroup chunkedLoading>
+                {issues
+                  .filter(issue => issue.location?.lat && issue.location?.lng)
+                  .map((issue) => (
+                    <Marker
+                      key={issue._1d || issue.id}
+                      position={[issue.location.lat, issue.location.lng]}
+                      icon={createCustomIcon(issue.status)}
+                      eventHandlers={{ click: () => setSelectedIssue(issue) }}
+                    >
+                      <Popup>
+                        <div className="p-2 min-w-[220px]">
+                          <h3 className="font-bold text-lg mb-2">{issue.title}</h3>
+                          <div className="space-y-1 text-sm text-gray-100">
+                            <p className="text-white/70">{issue.description?.substring(0, 100)}...</p>
+                            <div className="flex gap-2 mt-2">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                issue.status === 'reported' ? 'bg-red-100 text-red-700' :
+                                issue.status === 'acknowledged' ? 'bg-yellow-100 text-yellow-700' :
+                                issue.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                                'bg-green-100 text-green-700'
+                              }`}>
+                                {issue.status}
+                              </span>
+                              <span className="px-2 py-1 rounded text-xs bg-white/10 text-white/90">
+                                {issue.category}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))}
+              </MarkerClusterGroup>
+            )}
+          </MapContainer>
+        </div>
       </div>
 
       {/* Legend */}
-      <div className="bg-gray-50 p-4 border-t">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Legend</h3>
-        <div className="flex flex-wrap gap-4 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-            <span>Reported</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
-            <span>Acknowledged</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-            <span>In Progress</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-            <span>Resolved</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-500 rounded-full"></div>
-            <span>Rejected</span>
+      <div className="max-w-7xl mx-auto px-6 pb-8">
+        <div className="rounded-xl border border-white/6 bg-white/3 backdrop-blur-md p-4">
+          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><Layers className="w-4 h-4" /> Heatmap Legend</h3>
+          <div className="flex flex-wrap gap-6">
+            <div className="flex items-center gap-3">
+              <div className="h-4 w-4 rounded-full bg-red-500 shadow-md"></div>
+              <span className="text-sm text-white/80">Reported</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-4 w-4 rounded-full bg-yellow-500 shadow-md"></div>
+              <span className="text-sm text-white/80">Acknowledged</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-4 w-4 rounded-full bg-blue-500 shadow-md"></div>
+              <span className="text-sm text-white/80">In Progress</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-4 w-4 rounded-full bg-green-500 shadow-md"></div>
+              <span className="text-sm text-white/80">Resolved</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-4 w-4 rounded-full bg-gray-500 shadow-md"></div>
+              <span className="text-sm text-white/80">Rejected</span>
+            </div>
           </div>
         </div>
       </div>

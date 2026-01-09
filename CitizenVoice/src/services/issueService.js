@@ -131,18 +131,31 @@ class IssueService {
   }
 
   // Add comment to issue
-  async addComment(id, comment) {
-    const response = await fetch(`${API_BASE_URL}/issues/${id}/comment`, {
+  async addComment(id, text) {
+    const response = await fetch(`${API_BASE_URL}/issues/${id}/comments`, {
       method: "POST",
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ comment }),
+      body: JSON.stringify({ text }),
     });
 
     if (!response.ok) {
       throw new Error("Failed to add comment");
+    }
+
+    return response.json();
+  }
+
+  // Get comments for an issue
+  async getComments(id) {
+    const response = await fetch(`${API_BASE_URL}/issues/${id}/comments`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch comments");
     }
 
     return response.json();
@@ -337,6 +350,19 @@ class IssueService {
 
     if (!response.ok) {
       throw new Error("Failed to fetch community statistics");
+    }
+
+    return response.json();
+  }
+
+  // Community: Get community leaderboard (top contributors)
+  async getCommunityLeaderboard(limit = 10) {
+    const response = await fetch(`${API_BASE_URL}/community/leaderboard?limit=${limit}`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch community leaderboard");
     }
 
     return response.json();

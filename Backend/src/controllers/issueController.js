@@ -192,7 +192,7 @@ export const getRecentIssues = asyncHandler(async (req, res) => {
 
 // Get All Issues with Filters
 export const getAllIssues = asyncHandler(async (req, res) => {
-  const { status, category, priority, search } = req.query;
+  const { status, category, priority, search, district, state, city } = req.query;
   
   const query = {};
   
@@ -207,6 +207,19 @@ export const getAllIssues = asyncHandler(async (req, res) => {
   
   if (priority && priority !== 'all') {
     query.priority = priority;
+  }
+
+  // Location filters
+  if (district) {
+    query['location.district'] = district;
+  }
+  
+  if (state) {
+    query['location.state'] = state;
+  }
+  
+  if (city) {
+    query['location.city'] = city;
   }
   
   // Search by title or description
@@ -229,7 +242,7 @@ export const getAllIssues = asyncHandler(async (req, res) => {
 
 // Get Issues for Map
 export const getMapIssues = asyncHandler(async (req, res) => {
-  const { bounds, status, category } = req.query;
+  const { bounds, status, category, district, state } = req.query;
   
   const query = {};
   
@@ -238,6 +251,15 @@ export const getMapIssues = asyncHandler(async (req, res) => {
     const [minLat, minLng, maxLat, maxLng] = bounds.split(',').map(Number);
     query['location.lat'] = { $gte: minLat, $lte: maxLat };
     query['location.lng'] = { $gte: minLng, $lte: maxLng };
+  }
+
+  // District/State filters
+  if (district) {
+    query['location.district'] = district;
+  }
+  
+  if (state) {
+    query['location.state'] = state;
   }
   
   if (status && status !== 'all') {
@@ -249,7 +271,7 @@ export const getMapIssues = asyncHandler(async (req, res) => {
   }
   
   const issues = await Issue.find(query)
-    .select('issueId title category status location createdAt')
+    .select('issueId title category status location createdAt upvotes comments')
     .lean();
   
   res.json(
@@ -637,3 +659,70 @@ export const markResolved = async (req, res) => {
 
   res.json(issue);
 };
+
+// Add Comment to Issue
+export const addComment = asyncHandler(async (req, res) => {
+  const { issueId } = req.params;
+  const { text } = req.body;
+  
+  if (!text || text.trim().length === 0) {
+    throw new ApiError(400, 'Comment text is required');
+  }
+  
+  const issue = await Issue.findById(issueId);
+  
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  
+  // Add comment
+  const comment = {
+    user: req.user._id,
+    text: text.trim(),
+    createdAt: new Date()
+  };
+  
+  issue.comments.push(comment);
+  await issue.save();
+  
+  // Populate the comment user details
+  await issue.populate({
+    path: 'comments.user',
+    select: 'username avatar email'
+  });
+  
+  // Get the newly added comment
+  const newComment = issue.comments[issue.comments.length - 1];
+  
+  console.log(`💬 [Comment] User ${req.user.username} commented on issue ${issueId}`);
+  
+  res.json(
+    new ApiResponse(200, { 
+      comment: newComment,
+      totalComments: issue.comments.length 
+    }, 'Comment added successfully')
+  );
+});
+
+// Get Comments for Issue
+export const getComments = asyncHandler(async (req, res) => {
+  const { issueId } = req.params;
+  
+  const issue = await Issue.findById(issueId)
+    .select('comments')
+    .populate({
+      path: 'comments.user',
+      select: 'username avatar email'
+    });
+  
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  
+  res.json(
+    new ApiResponse(200, { 
+      comments: issue.comments,
+      total: issue.comments.length 
+    }, 'Comments fetched successfully')
+  );
+});

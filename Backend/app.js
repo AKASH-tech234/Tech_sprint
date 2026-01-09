@@ -63,6 +63,7 @@ import messageRoutes from "./src/routes/messageRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import verificationRoutes from "./src/routes/verificationRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
+import communityRoutes from "./src/routes/communityRoutes.js";
 
 import Message from "./src/models/message.js";
 
@@ -198,6 +199,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/verification", verificationRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/community", communityRoutes);
 
 // Make io accessible in controllers
 app.set('io', io);
