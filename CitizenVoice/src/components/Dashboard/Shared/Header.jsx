@@ -113,6 +113,22 @@ export function Header({
           <Search className="h-5 w-5" />
         </button>
 
+        {/* Role Status Badge */}
+        <div
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${
+            role === "official"
+              ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+              : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              role === "official" ? "bg-amber-400" : "bg-emerald-400"
+            }`}
+          />
+          {role === "official" ? "Official" : "Citizen"}
+        </div>
+
         {/* Dark/Light Mode Toggle */}
         <button
           onClick={() => setDarkMode(!darkMode)}
