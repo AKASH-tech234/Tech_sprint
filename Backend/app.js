@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -67,14 +66,16 @@ const io = new Server(server, {
 const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
-  console.log(" Socket connected:", socket.id);
+  console.log("🔌 Socket connected:", socket.id);
 
   socket.on("join", (userId) => {
     socket.join(userId);
     // Also join a user-specific room for notifications
-    socket.join(`user_${userId}`);
+    const roomName = `user_${userId}`;
+    socket.join(roomName);
     onlineUsers.set(userId, socket.id);
-    console.log(` User ${userId} joined room`);
+    console.log(`✅ User ${userId} joined rooms: [${userId}, ${roomName}]`);
+    console.log(`📊 Total online users: ${onlineUsers.size}`);
 
     // Broadcast user online status
     io.emit("userOnline", userId);
@@ -148,6 +149,10 @@ app.use(cookieParser());
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// Make io accessible in controllers (MUST be before routes)
+app.set("io", io);
+console.log("✅ Socket.IO registered with Express app");
+
 // -------------------- Routes --------------------
 app.use("/api/auth", authRoutes);
 app.use("/api/issues", issueRoutes);
@@ -175,11 +180,34 @@ initRag()
   })
   .catch((err) => console.error("RAG init error:", err));
 
-// Make io accessible in controllers
-app.set("io", io);
-
 app.get("/", (req, res) => {
   res.send("CitizenVoice Backend is running 🚀");
+});
+
+// Debug endpoint to test socket emission
+app.get("/api/test-notification/:userId", (req, res) => {
+  const { userId } = req.params;
+  const io = req.app.get("io");
+
+  if (!io) {
+    return res.status(500).json({ error: "Socket.IO not initialized" });
+  }
+
+  const roomName = `user_${userId}`;
+  console.log(`🧪 [Test] Sending test notification to room: ${roomName}`);
+
+  io.to(roomName).emit("issueStatusUpdate", {
+    title: "Test Notification",
+    message: "This is a test notification from the server",
+    issueId: "TEST-001",
+    status: "test",
+  });
+
+  res.json({
+    success: true,
+    message: `Test notification sent to room ${roomName}`,
+    connectedSockets: io.sockets.sockets.size,
+  });
 });
 
 // -------------------- Error Handling --------------------

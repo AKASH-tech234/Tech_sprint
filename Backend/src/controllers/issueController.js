@@ -8,6 +8,7 @@ import sendEmail from "../utils/sendemail.js";
 import { issueSubmittedTemplate } from "../utils/emailTemplates.js";
 import { outcomeGamificationService } from "../services/outcomeGamificationService.js";
 import { gamificationService } from "../services/gamificationServices.js";
+import { createNotification } from "./notificationController.js";
 
 // Helper function to extract public_id from Cloudinary URL
 const getPublicIdFromUrl = (url) => {
@@ -97,7 +98,10 @@ export const createIssue = asyncHandler(async (req, res) => {
   // Validate state and district for proper districtId generation
   if (!locationData.state || !locationData.district) {
     console.warn("⚠️ [CreateIssue] Missing state or district in location data");
-    throw new ApiError(400, "State and district are required for issue location");
+    throw new ApiError(
+      400,
+      "State and district are required for issue location"
+    );
   }
 
   // Generate districtId from location data
@@ -109,7 +113,10 @@ export const createIssue = asyncHandler(async (req, res) => {
 
   // Ensure districtId was successfully generated
   if (!districtId) {
-    throw new ApiError(400, "Failed to generate district ID from location data");
+    throw new ApiError(
+      400,
+      "Failed to generate district ID from location data"
+    );
   }
 
   // Get uploaded image URLs
@@ -218,6 +225,44 @@ export const createIssue = asyncHandler(async (req, res) => {
     console.error(
       "❌ [Gamification] Error awarding legacy points:",
       error.message
+    );
+  }
+
+  // Send socket notification for new issue
+  const io = req.app.get("io");
+  if (io) {
+    const userId = req.user._id.toString();
+    const roomName = `user_${userId}`;
+
+    console.log(`📢 [CreateIssue] Emitting notification to room: ${roomName}`);
+
+    // Save notification to database
+    const savedNotification = await createNotification(
+      req.user._id,
+      "issue_status_update",
+      "Issue Reported Successfully",
+      `Your issue "${issue.title}" has been submitted and is awaiting review.`,
+      {
+        relatedIssue: issue._id,
+        metadata: { issueId: issue.issueId, status: "reported" },
+      }
+    );
+    console.log(
+      `💾 [CreateIssue] Notification saved to DB:`,
+      savedNotification?._id
+    );
+
+    // Emit socket event for real-time push notification
+    io.to(roomName).emit("issueStatusUpdate", {
+      title: "Issue Reported Successfully",
+      message: `Your issue "${issue.title}" has been submitted and is awaiting review.`,
+      issueId: issue.issueId || issue._id,
+      status: "reported",
+      notificationId: savedNotification?._id,
+    });
+
+    console.log(
+      `📢 [CreateIssue] Notification sent for issue ${issue.issueId}`
     );
   }
 
@@ -499,6 +544,9 @@ export const updateIssue = asyncHandler(async (req, res) => {
     throw new ApiError(403, "Not authorized to update this issue");
   }
 
+  // Track old status for notification
+  const oldStatus = issue.status;
+
   // Update fields
   if (title) issue.title = title;
   if (description) issue.description = description;
@@ -541,6 +589,61 @@ export const updateIssue = asyncHandler(async (req, res) => {
   }
 
   await issue.save();
+
+  // Send push notification if status changed
+  if (status && oldStatus !== status && issue.reportedBy) {
+    const io = req.app.get("io");
+    if (io) {
+      const statusMessages = {
+        reported: "Your issue has been reported and is awaiting review",
+        acknowledged: "Your issue has been acknowledged by our team",
+        "in-progress": "Work has begun on your issue",
+        resolved: "Your issue has been resolved!",
+        rejected: "Your issue has been reviewed",
+      };
+
+      // reportedBy is an ObjectId (not populated), convert to string
+      const userId = issue.reportedBy.toString();
+      const roomName = `user_${userId}`;
+      const message =
+        statusMessages[status] || `Your issue status is now: ${status}`;
+
+      console.log(`📢 [StatusUpdate] Emitting to room: ${roomName}`);
+      console.log(
+        `📢 [StatusUpdate] Status changed: ${oldStatus} -> ${status}`
+      );
+      console.log(`📢 [StatusUpdate] Issue: ${issue.issueId}`);
+
+      // Save notification to database
+      const savedNotification = await createNotification(
+        issue.reportedBy,
+        "issue_status_update",
+        "Issue Status Updated",
+        message,
+        {
+          relatedIssue: issue._id,
+          metadata: { issueId: issue.issueId, status, oldStatus },
+        }
+      );
+      console.log(
+        `💾 [StatusUpdate] Notification saved to DB:`,
+        savedNotification?._id
+      );
+
+      // Emit socket event for real-time push notification
+      io.to(roomName).emit("issueStatusUpdate", {
+        title: "Issue Status Updated",
+        message: message,
+        issueId: issue.issueId || issue._id,
+        status: status,
+        notificationId: savedNotification?._id,
+      });
+
+      console.log(
+        `📢 [StatusUpdate] Notification sent to room ${roomName} for issue ${issue.issueId}`
+      );
+    }
+  }
 
   res.json(new ApiResponse(200, issue, "Issue updated successfully"));
 });
