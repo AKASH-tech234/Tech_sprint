@@ -8,6 +8,9 @@ export const getCommunityStats = async (req, res) => {
   try {
     const { districtId } = req.query;
     
+    console.log('📊 [CommunityStats] Request received');
+    console.log('📊 [CommunityStats] District ID:', districtId || 'ALL');
+    
     // Build query filter
     const filter = districtId ? { districtId } : {};
     
@@ -16,6 +19,8 @@ export const getCommunityStats = async (req, res) => {
     const acknowledged = await Issue.countDocuments({ ...filter, status: 'acknowledged' });
     const inProgress = await Issue.countDocuments({ ...filter, status: 'in-progress' });
     const resolved = await Issue.countDocuments({ ...filter, status: 'resolved' });
+
+    console.log('📊 [CommunityStats] Totals:', { totalIssues, reported, acknowledged, inProgress, resolved });
 
     // category breakdown
     const categoryAgg = await Issue.aggregate([
@@ -115,15 +120,22 @@ export const getCommunityIssues = async (req, res) => {
   try {
     const { districtId, status, category, limit = 50 } = req.query;
     
+    console.log('📋 [CommunityIssues] Request received');
+    console.log('📋 [CommunityIssues] Params:', { districtId: districtId || 'ALL', status, category, limit });
+    
     const filter = {};
     if (districtId) filter.districtId = districtId;
     if (status && status !== 'all') filter.status = status;
     if (category && category !== 'all') filter.category = category;
     
+    console.log('📋 [CommunityIssues] Filter:', filter);
+    
     const issues = await Issue.find(filter)
       .populate('reportedBy', 'username avatar')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit));
+    
+    console.log('📋 [CommunityIssues] Found:', issues.length, 'issues');
     
     res.json({
       districtId: districtId || 'all',

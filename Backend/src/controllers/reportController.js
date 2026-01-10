@@ -5,6 +5,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 import { isOfficialAdmin } from '../utils/officialPermissions.js';
+import { outcomeGamificationService } from "../services/outcomeGamificationService.js";
 
 // =====================================================
 // TEAM MEMBER ENDPOINTS (Submit Reports)
@@ -262,6 +263,49 @@ export const reviewReport = asyncHandler(async (req, res) => {
       // Resolution approved → status becomes 'resolved'
       issue.status = 'resolved';
       console.log('✅ [ReviewReport] Issue status changed to resolved');
+
+      // ======================================
+      // GAMIFICATION: outcome-driven RP awards
+      // - Only award from trusted review (official admin)
+      // - Keep awards server-side (never from client)
+      // ======================================
+      try {
+        if (issue.districtId && issue.reportedBy) {
+          // Treat approved proof images as verified after-photos
+          if (Array.isArray(report.proof) && report.proof.length > 0) {
+            issue.gamification = issue.gamification || {};
+            issue.gamification.afterPhotoUploaded = true;
+            issue.gamification.afterPhotoUrl = report.proof[0];
+            issue.gamification.afterPhotoVerified = true;
+            await issue.save();
+
+            if (!issue.gamification.rpAwardedForAfterPhoto) {
+              const afterPhotoAward =
+                await outcomeGamificationService.awardAfterPhotoUploaded(
+                  issue.reportedBy,
+                  issue._id,
+                  issue.districtId
+                );
+              if (afterPhotoAward?.success) {
+                issue.gamification.rpAwardedForAfterPhoto = true;
+                await issue.save();
+              }
+            }
+          }
+
+          // Verified resolution award (service enforces quorumMet check)
+          await outcomeGamificationService.processResolutionVerification(
+            issue._id,
+            adminId,
+            true
+          );
+        }
+      } catch (error) {
+        console.error(
+          "❌ [Gamification] Error processing approved resolution report:",
+          error.message
+        );
+      }
 
       // TODO: If notifyReporter is true, send notification to issue reporter
       if (notifyReporter) {
