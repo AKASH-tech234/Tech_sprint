@@ -21,6 +21,7 @@ import {
   ClipboardCheck,
   User,
   Trophy,
+  Sparkles,
 } from "lucide-react";
 
 // Menu configurations by role
@@ -38,6 +39,11 @@ const menuConfig = {
       path: "/dashboard/citizen/issues",
     },
     { icon: Map, label: "Community Map", path: "/dashboard/citizen/map" },
+    {
+      icon: Sparkles,
+      label: "Ask AI",
+      path: "/dashboard/citizen/ai",
+    },
     {
       icon: Bell,
       label: "Notifications",
