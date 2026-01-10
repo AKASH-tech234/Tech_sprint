@@ -516,6 +516,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/community", communityRoutes);
 app.use("/api/classification", classificationRoutes);
 app.use("/api/gamification", gamificationRoutes);
+app.use("/uploads", express.static("uploads"));
 
 // Make io accessible in controllers
 app.set("io", io);

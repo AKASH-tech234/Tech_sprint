@@ -63,6 +63,10 @@ const issueSchema = new mongoose.Schema(
         type: String, // URLs to uploaded images
       },
     ],
+    solutionPdf: {
+  type: String, // URL or path to generated resolution PDF
+},
+
     reportedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

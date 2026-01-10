@@ -5,6 +5,9 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 import { isOfficialAdmin } from '../utils/officialPermissions.js';
+import sendEmail from "../utils/sendemail.js";
+import { generateIssueResolutionPDF } from "../utils/issuePdfGenerator.js";
+
 
 // =====================================================
 // TEAM MEMBER ENDPOINTS (Submit Reports)
@@ -209,82 +212,229 @@ export const getReportDetails = asyncHandler(async (req, res) => {
  * POST /api/officials/reports/:reportId/review
  * Review (approve/reject) a report
  */
+// export const reviewReport = asyncHandler(async (req, res) => {
+//   const { reportId } = req.params;
+//   const { decision, remarks, newStatus, notifyReporter } = req.body;
+//   const adminId = req.user._id;
+
+//   console.log('🔍 [ReviewReport] Request received for report:', reportId);
+//   console.log('🔍 [ReviewReport] Decision:', decision);
+
+//   // Validate decision
+//   if (!decision || !['approve', 'reject'].includes(decision)) {
+//     throw new ApiError(400, 'Invalid decision. Must be "approve" or "reject"');
+//   }
+
+//   // Find the report
+//   const report = await Report.findById(reportId).populate('issue');
+//   if (!report) {
+//     throw new ApiError(404, 'Report not found');
+//   }
+
+//   if (report.status !== 'pending') {
+//     throw new ApiError(400, 'Report has already been reviewed');
+//   }
+
+//   // Get the issue
+//   const issue = await Issue.findById(report.issue._id);
+//   if (!issue) {
+//     throw new ApiError(404, 'Associated issue not found');
+//   }
+
+//   // Update report status
+//   report.status = decision === 'approve' ? 'approved' : 'rejected';
+//   report.reviewedBy = adminId;
+//   report.reviewedAt = new Date();
+//   report.adminRemarks = remarks;
+
+//   await report.save();
+
+//   // If approved, update issue status based on report type
+//   if (decision === 'approve') {
+//     if (report.reportType === 'verification') {
+//       // Verification approved → status becomes 'in-progress'
+//       if (report.outcome === 'verified') {
+//         issue.status = 'in-progress';
+//         console.log('✅ [ReviewReport] Issue status changed to in-progress');
+//       } else {
+//         // If not verified, issue can be rejected
+//         issue.status = 'rejected';
+//         console.log('✅ [ReviewReport] Issue status changed to rejected (not verified)');
+//       }
+//     } else if (report.reportType === 'resolution') {
+//       // Resolution approved → status becomes 'resolved'
+//       issue.status = 'resolved';
+//       console.log('✅ [ReviewReport] Issue status changed to resolved');
+
+//       // TODO: If notifyReporter is true, send notification to issue reporter
+//       if (notifyReporter) {
+//         console.log('📧 [ReviewReport] Should notify reporter:', issue.reportedBy);
+//         // Notification logic can be added here (email, push notification, etc.)
+//       }
+//     }
+
+//     await issue.save();
+//   }
+
+//   // Populate response
+//   await report.populate('submittedBy', 'username email');
+//   await report.populate('reviewedBy', 'username email');
+//   await report.populate('issue', 'issueId title status');
+
+//   console.log('✅ [ReviewReport] Report reviewed successfully');
+
+//   res.json(new ApiResponse(200, { 
+//     report,
+//     issueStatus: issue.status 
+//   }, `Report ${decision}d successfully`));
+// });
+
+
+
 export const reviewReport = asyncHandler(async (req, res) => {
   const { reportId } = req.params;
-  const { decision, remarks, newStatus, notifyReporter } = req.body;
+  const { decision, remarks, notifyReporter } = req.body;
   const adminId = req.user._id;
 
-  console.log('🔍 [ReviewReport] Request received for report:', reportId);
-  console.log('🔍 [ReviewReport] Decision:', decision);
+  console.log("🔍 [ReviewReport] Request received:", reportId);
 
-  // Validate decision
-  if (!decision || !['approve', 'reject'].includes(decision)) {
-    throw new ApiError(400, 'Invalid decision. Must be "approve" or "reject"');
+  if (!decision || !["approve", "reject"].includes(decision)) {
+    throw new ApiError(400, 'Decision must be "approve" or "reject"');
   }
 
-  // Find the report
-  const report = await Report.findById(reportId).populate('issue');
-  if (!report) {
-    throw new ApiError(404, 'Report not found');
+  const report = await Report.findById(reportId).populate("issue");
+  if (!report) throw new ApiError(404, "Report not found");
+
+  if (report.status !== "pending") {
+    throw new ApiError(400, "Report already reviewed");
   }
 
-  if (report.status !== 'pending') {
-    throw new ApiError(400, 'Report has already been reviewed');
-  }
+  const issue = await Issue.findById(report.issue._id)
+    .populate("reportedBy assignedTo");
 
-  // Get the issue
-  const issue = await Issue.findById(report.issue._id);
-  if (!issue) {
-    throw new ApiError(404, 'Associated issue not found');
-  }
+  if (!issue) throw new ApiError(404, "Associated issue not found");
 
-  // Update report status
-  report.status = decision === 'approve' ? 'approved' : 'rejected';
+  // -------------------------------
+  // Update report metadata
+  // -------------------------------
+  report.status = decision === "approve" ? "approved" : "rejected";
   report.reviewedBy = adminId;
   report.reviewedAt = new Date();
   report.adminRemarks = remarks;
-
   await report.save();
 
-  // If approved, update issue status based on report type
-  if (decision === 'approve') {
-    if (report.reportType === 'verification') {
-      // Verification approved → status becomes 'in-progress'
-      if (report.outcome === 'verified') {
-        issue.status = 'in-progress';
-        console.log('✅ [ReviewReport] Issue status changed to in-progress');
-      } else {
-        // If not verified, issue can be rejected
-        issue.status = 'rejected';
-        console.log('✅ [ReviewReport] Issue status changed to rejected (not verified)');
-      }
-    } else if (report.reportType === 'resolution') {
-      // Resolution approved → status becomes 'resolved'
-      issue.status = 'resolved';
-      console.log('✅ [ReviewReport] Issue status changed to resolved');
+  // -------------------------------
+  // APPROVAL LOGIC
+  // -------------------------------
+  if (decision === "approve") {
 
-      // TODO: If notifyReporter is true, send notification to issue reporter
-      if (notifyReporter) {
-        console.log('📧 [ReviewReport] Should notify reporter:', issue.reportedBy);
-        // Notification logic can be added here (email, push notification, etc.)
-      }
+    // ✅ VERIFICATION REPORT
+    if (report.reportType === "verification") {
+      issue.status =
+        report.outcome === "verified" ? "in-progress" : "rejected";
+      await issue.save();
     }
 
-    await issue.save();
+    // ✅ RESOLUTION REPORT (THIS IS YOUR MAIN FEATURE)
+    if (report.reportType === "resolution") {
+
+      // 1️⃣ Mark issue resolved
+      issue.status = "resolved";
+      await issue.save();
+
+      // 2️⃣ Generate PDF (FULL HISTORY)
+      await report.populate("submittedBy", "username email");
+
+      const pdfUrl = await generateIssueResolutionPDF({
+        issue,
+        report,
+      });
+
+      // 3️⃣ Save PDF URL in Issue
+      issue.solutionPdf = pdfUrl;
+      await issue.save();
+
+      // 4️⃣ Email PDF to citizen
+      if (notifyReporter && issue.reportedBy?.email) {
+        // await sendEmail({
+        //   to: issue.reportedBy.email,
+        //   subject: "Your Complaint Has Been Officially Resolved",
+        //   html: `
+        //     <h3>Complaint Resolved ✅</h3>
+        //     <p><b>${issue.title}</b> has been officially approved by authorities.</p>
+        //     <p>You can download the complete resolution report below:</p>
+        //     <a href="${process.env.CLIENT_URL}${pdfUrl}">
+        //       📄 Download Resolution PDF
+        //     </a>
+        //   `,
+        // });
+
+        await sendEmail({
+  to: issue.reportedBy.email,
+  subject: "Your Complaint Has Been Officially Resolved",
+  html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2>✅ Complaint Resolved</h2>
+
+      <p>
+        Your issue <b>${issue.title}</b> has been officially resolved and approved
+        by the concerned authority.
+      </p>
+
+      <p>
+        You can download the complete resolution report (PDF) by clicking below:
+      </p>
+
+      <a href="${process.env.CLIENT_URL}${issue.solutionPdf}"
+         target="_blank"
+         style="display:inline-block; margin-top:15px;">
+        <img 
+          src="https://cdn-icons-png.flaticon.com/512/337/337946.png"
+          alt="Download PDF"
+          width="180"
+          style="border:none;"
+        />
+      </a>
+
+      <p style="margin-top:20px; font-size:13px; color:#666;">
+        If the button does not work, copy & paste this link:
+        <br/>
+        <a href="${process.env.CLIENT_URL}${issue.solutionPdf}">
+          ${process.env.CLIENT_URL}${issue.solutionPdf}
+        </a>
+      </p>
+
+      <hr/>
+      <p style="font-size:12px;color:#999;">
+        Citizen Voice • Transparent Governance Platform
+      </p>
+    </div>
+  `,
+});
+
+      }
+    }
   }
 
+  // -------------------------------
   // Populate response
-  await report.populate('submittedBy', 'username email');
-  await report.populate('reviewedBy', 'username email');
-  await report.populate('issue', 'issueId title status');
+  // -------------------------------
+  await report.populate("submittedBy", "username email");
+  await report.populate("reviewedBy", "username email");
 
-  console.log('✅ [ReviewReport] Report reviewed successfully');
-
-  res.json(new ApiResponse(200, { 
-    report,
-    issueStatus: issue.status 
-  }, `Report ${decision}d successfully`));
+  res.json(
+    new ApiResponse(
+      200,
+      {
+        report,
+        issueStatus: issue.status,
+        solutionPdf: issue.solutionPdf || null,
+      },
+      `Report ${decision}d successfully`
+    )
+  );
 });
+
 
 /**
  * GET /api/officials/reports/history/:issueId
