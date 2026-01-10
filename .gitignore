@@ -33,3 +33,10 @@ Backend/uploads/
 *.jpg
 *.png
 *.jpeg
+
+
+#ml
+
+__pycache__/
+ml/__pycache__/
+*.pyc
