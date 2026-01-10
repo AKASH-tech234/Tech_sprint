@@ -57,6 +57,8 @@ const issueSchema = new mongoose.Schema(
       city: String,
       state: String,
       district: String,
+      country: String,
+      pincode: String,
     },
     images: [
       {

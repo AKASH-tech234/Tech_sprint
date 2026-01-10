@@ -8,6 +8,20 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 import { outcomeGamificationService } from "../services/outcomeGamificationService.js";
 
+const normalizeDistrictPart = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
+
+const generateDistrictId = (state, district) => {
+  const s = normalizeDistrictPart(state);
+  const d = normalizeDistrictPart(district);
+  if (!s || !d) return null;
+  return `${s}__${d}`;
+};
+
 // Verify an issue (Community only)
 export const verifyIssue = asyncHandler(async (req, res) => {
   const { issueId } = req.params;
@@ -40,6 +54,32 @@ export const verifyIssue = asyncHandler(async (req, res) => {
   );
   if (!issue) {
     throw new ApiError(404, "Issue not found");
+  }
+
+  // Only allow verification on active issues
+  if (!["reported", "acknowledged", "in-progress"].includes(issue.status)) {
+    throw new ApiError(400, "Issue cannot be verified in its current status");
+  }
+
+  // Enforce same-district verification to prevent cross-community gaming
+  const verifierDistrictId = generateDistrictId(
+    user.fullAddress?.state,
+    user.fullAddress?.district
+  );
+  if (!verifierDistrictId) {
+    throw new ApiError(
+      403,
+      "Your profile must include state and district to verify issues"
+    );
+  }
+  if (!issue.districtId) {
+    throw new ApiError(400, "Issue district is missing; cannot verify");
+  }
+  if (issue.districtId !== verifierDistrictId) {
+    throw new ApiError(
+      403,
+      "You can only verify issues within your registered district"
+    );
   }
 
   // Check if user already verified this issue

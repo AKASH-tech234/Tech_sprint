@@ -94,12 +94,23 @@ export const createIssue = asyncHandler(async (req, res) => {
     throw new ApiError(400, "GPS coordinates required");
   }
 
+  // Validate state and district for proper districtId generation
+  if (!locationData.state || !locationData.district) {
+    console.warn("⚠️ [CreateIssue] Missing state or district in location data");
+    throw new ApiError(400, "State and district are required for issue location");
+  }
+
   // Generate districtId from location data
   const districtId = generateDistrictId(
     locationData.state,
     locationData.district
   );
   console.log("📍 [CreateIssue] Generated districtId:", districtId);
+
+  // Ensure districtId was successfully generated
+  if (!districtId) {
+    throw new ApiError(400, "Failed to generate district ID from location data");
+  }
 
   // Get uploaded image URLs
   const useCloudinary = process.env.USE_CLOUDINARY === "true";

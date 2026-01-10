@@ -81,6 +81,9 @@ export function ReportIssue({
       lng: null,
       city: "",
       state: "",
+      district: "",
+      country: "",
+      pincode: "",
     },
   });
   const [images, setImages] = useState([]);
@@ -97,6 +100,27 @@ export function ReportIssue({
   const [classifying, setClassifying] = useState(false);
   const [classificationError, setClassificationError] = useState(null);
 
+  // State/District selector state
+  const [statesData, setStatesData] = useState({});
+  const [availableDistricts, setAvailableDistricts] = useState([]);
+
+  // Load states and districts data
+  useEffect(() => {
+    fetch('/india_states_districts.json')
+      .then(res => res.json())
+      .then(data => setStatesData(data))
+      .catch(err => console.error('Failed to load states data:', err));
+  }, []);
+
+  // Update available districts when state changes
+  useEffect(() => {
+    if (formData.location.state && statesData[formData.location.state]) {
+      setAvailableDistricts(statesData[formData.location.state]);
+    } else {
+      setAvailableDistricts([]);
+    }
+  }, [formData.location.state, statesData]);
+
   // Initialize form data when editing
   useEffect(() => {
     if (editMode && initialData && isOpen) {
@@ -111,6 +135,9 @@ export function ReportIssue({
           lng: null,
           city: "",
           state: "",
+          district: "",
+          country: "",
+          pincode: "",
         },
       });
 
@@ -297,43 +324,79 @@ export function ReportIssue({
           },
         }));
 
-        // Reverse geocoding to get address
+        // Reverse geocoding to get address, state, and district
         try {
-          /**
-           * BACKEND API CALL: Reverse Geocoding
-           * Endpoint: POST /api/geocoding/reverse
-           * Body: { lat: latitude, lng: longitude }
-           * Response: { address: string, city: string, state: string, country: string }
-           */
+          console.log('🌍 Starting reverse geocoding...');
+          
+          // Use Nominatim (OpenStreetMap) for reverse geocoding
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?` +
+            `format=json&lat=${latitude}&lon=${longitude}&` +
+            `addressdetails=1&zoom=18`,
+            {
+              headers: {
+                'User-Agent': 'CitizenVoice App'
+              }
+            }
+          );
 
-          // Uncomment when backend is ready:
-          // const response = await fetch('/api/geocoding/reverse', {
-          //   method: 'POST',
-          //   headers: { 'Content-Type': 'application/json' },
-          //   credentials: 'include',
-          //   body: JSON.stringify({ lat: latitude, lng: longitude })
-          // });
-          // const data = await response.json();
+          if (!response.ok) {
+            throw new Error('Reverse geocoding failed');
+          }
 
-          // Mock response for now
-          const mockAddress = `${latitude.toFixed(6)}°N, ${longitude.toFixed(
-            6
-          )}°E`;
-          const mockCity = "Your City";
-          const mockState = "Your State";
+          const data = await response.json();
+          console.log('🌍 Reverse geocoding response:', data);
+
+          // Extract address components
+          const address = data.address || {};
+          const displayName = data.display_name || `${latitude.toFixed(6)}°N, ${longitude.toFixed(6)}°E`;
+          
+          // Extract state - try different possible keys
+          const state = address.state || 
+                       address.state_district || 
+                       address.region || 
+                       'Unknown State';
+          
+          // Extract district - try different possible keys
+          const district = address.state_district || 
+                          address.county || 
+                          address.district || 
+                          address.city || 
+                          address.town || 
+                          address.village || 
+                          'Unknown District';
+          
+          const city = address.city || 
+                      address.town || 
+                      address.village || 
+                      address.municipality || 
+                      district;
+          
+          const country = address.country || 'India';
+          const pincode = address.postcode || '';
+
+          console.log('📍 Extracted location:', { state, district, city, country, pincode });
 
           setFormData((prev) => ({
             ...prev,
             location: {
               ...prev.location,
-              address: mockAddress,
-              city: mockCity,
-              state: mockState,
+              address: displayName,
+              city: city,
+              state: state,
+              district: district,
+              country: country,
+              pincode: pincode
             },
           }));
+
+          console.log('✅ Location data updated with reverse geocoding');
         } catch (err) {
           console.error("❌ Reverse geocoding failed:", err);
-          // Fallback to coordinates
+          
+          // Fallback: use coordinates as address
+          const coordinateAddress = `${latitude.toFixed(6)}°N, ${longitude.toFixed(6)}°E`;
+          
           setFormData((prev) => ({
             ...prev,
             location: {
@@ -396,6 +459,10 @@ export function ReportIssue({
     }
     if (!formData.location.lat || !formData.location.lng) {
       setError("Please provide a location using GPS or enter manually");
+      return;
+    }
+    if (!formData.location.state || !formData.location.district) {
+      setError("Please select your state and district");
       return;
     }
 
@@ -471,7 +538,7 @@ export function ReportIssue({
           description: "",
           category: "",
           priority: "medium",
-          location: { address: "", lat: null, lng: null, city: "", state: "" },
+          location: { address: "", lat: null, lng: null, city: "", state: "", district: "", country: "", pincode: "" },
         });
         setImages([]);
         setImagePreviews([]);
@@ -854,6 +921,105 @@ export function ReportIssue({
                     </div>
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* State and District Selection */}
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium text-white">
+                Location Details
+              </label>
+              
+              {/* Auto-detected location info */}
+              {formData.location.state && formData.location.district && (
+                <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-emerald-400 mb-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Auto-detected from GPS
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-white/80">
+                    <div>
+                      <span className="text-white/50">State:</span> {formData.location.state}
+                    </div>
+                    <div>
+                      <span className="text-white/50">District:</span> {formData.location.district}
+                    </div>
+                    {formData.location.city && (
+                      <div>
+                        <span className="text-white/50">City:</span> {formData.location.city}
+                      </div>
+                    )}
+                    {formData.location.pincode && (
+                      <div>
+                        <span className="text-white/50">Pincode:</span> {formData.location.pincode}
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-white/40">
+                    You can manually adjust state and district below if needed
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* State Selector */}
+                <div>
+                  <label className="mb-1 block text-xs text-white/60">
+                    State {!formData.location.state && '*'}
+                  </label>
+                  <select
+                    name="location.state"
+                    value={formData.location.state}
+                    onChange={(e) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        location: { 
+                          ...prev.location, 
+                          state: e.target.value,
+                          district: "" // Reset district when state changes
+                        },
+                      }));
+                    }}
+                    className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition-colors focus:border-rose-500/50"
+                  >
+                    <option value="" className="bg-zinc-900">
+                      {formData.location.state ? formData.location.state : 'Select State'}
+                    </option>
+                    {Object.keys(statesData).sort().map(state => (
+                      <option key={state} value={state} className="bg-zinc-900">
+                        {state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* District Selector */}
+                <div>
+                  <label className="mb-1 block text-xs text-white/60">
+                    District {!formData.location.district && '*'}
+                  </label>
+                  <select
+                    name="location.district"
+                    value={formData.location.district}
+                    onChange={handleInputChange}
+                    disabled={!formData.location.state && availableDistricts.length === 0}
+                    className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition-colors focus:border-rose-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="" className="bg-zinc-900">
+                      {formData.location.district ? formData.location.district : 'Select District'}
+                    </option>
+                    {availableDistricts.sort().map(district => (
+                      <option key={district} value={district} className="bg-zinc-900">
+                        {district}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {!formData.location.state && !formData.location.district && (
+                <p className="mt-2 text-xs text-white/40">
+                  💡 Tip: Click the GPS button above to auto-detect your location
+                </p>
               )}
             </div>
 

@@ -308,20 +308,28 @@ class OutcomeGamificationService {
 
         // Award RP to reporter for community-confirmed report
         if (isAccurate && !issue.gamification.rpAwardedForCommunityConfirm) {
-          await this.awardCommunityConfirmedReport(
+          const confirmAward = await this.awardCommunityConfirmedReport(
             reporterId,
             issueId,
             districtId
           );
+          if (confirmAward?.success) {
+            issue.gamification.rpAwardedForCommunityConfirm = true;
+          }
 
           // Award accurate categorization bonus
           if (!issue.gamification.rpAwardedForCategorization) {
-            await this.awardAccurateCategorization(
+            const catAward = await this.awardAccurateCategorization(
               reporterId,
               issueId,
               districtId
             );
+            if (catAward?.success) {
+              issue.gamification.rpAwardedForCategorization = true;
+            }
           }
+
+          await issue.save({ session });
         }
 
         await session.commitTransaction();
