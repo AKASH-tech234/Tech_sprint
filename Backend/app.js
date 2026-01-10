@@ -380,7 +380,7 @@ import verificationRoutes from "./src/routes/verificationRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
 import communityRoutes from "./src/routes/communityRoutes.js";
 import classificationRoutes from "./src/routes/classificationRoutes.js";
-
+import gamificationRoutes from "./src/routes/gamificationRoutes.js";
 import Message from "./src/models/message.js";
 
 // Load environment variables FIRST
@@ -515,6 +515,7 @@ app.use("/api/verification", verificationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/community", communityRoutes);
 app.use("/api/classification", classificationRoutes);
+app.use("/api/gamification", gamificationRoutes);
 
 // Make io accessible in controllers
 app.set("io", io);

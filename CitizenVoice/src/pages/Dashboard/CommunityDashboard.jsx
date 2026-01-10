@@ -12,6 +12,7 @@ import { CommunityStats } from "../../components/Dashboard/Community/communityst
 import { CommunityChat } from "../../components/Dashboard/Community/CommunityChat";
 import { DistrictSwitcher } from "../../components/Dashboard/Community/DistrictSwitcher";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
+import GamificationDashboard from "../../components/Gamificationdashboard";
 import { issueService } from "../../services/issueService";
 import { districtService } from "../../services/districtService";
 import { verificationService } from "../../services/verificationService";
@@ -59,7 +60,7 @@ function DashboardHome() {
   const fetchDashboardData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Fetch data based on selected district
       const [
@@ -69,25 +70,31 @@ function DashboardHome() {
         unverifiedResponse,
       ] = await Promise.all([
         // Fetch district-specific issues if district selected
-        activeDistrictId 
+        activeDistrictId
           ? districtService.getDistrictIssues(activeDistrictId, { limit: 50 })
-          : issueService.getIssues({ limit: 50 }).catch(err => ({ data: { issues: [] } })),
+          : issueService
+              .getIssues({ limit: 50 })
+              .catch((err) => ({ data: { issues: [] } })),
         // Fetch district-specific community stats
-        districtService.getCommunityStats(activeDistrictId).catch(err => null),
-        userService.getProfile().catch(err => null),
-        verificationService.getUnverifiedIssues().catch(err => ({ data: { issues: [] } })),
+        districtService
+          .getCommunityStats(activeDistrictId)
+          .catch((err) => null),
+        userService.getProfile().catch((err) => null),
+        verificationService
+          .getUnverifiedIssues()
+          .catch((err) => ({ data: { issues: [] } })),
       ]);
 
       // Process issues data
-      const allIssues = issuesResponse?.issues || issuesResponse?.data?.issues || [];
-      
+      const allIssues =
+        issuesResponse?.issues || issuesResponse?.data?.issues || [];
+
       // Use community stats if available
       if (communityStatsResponse?.overviewStats) {
         const { totalIssues, resolved } = communityStatsResponse.overviewStats;
-        const resolutionRate = totalIssues > 0 
-          ? Math.round((resolved / totalIssues) * 100) 
-          : 0;
-        
+        const resolutionRate =
+          totalIssues > 0 ? Math.round((resolved / totalIssues) * 100) : 0;
+
         setStats({
           areaIssues: totalIssues,
           resolutionRate,
@@ -96,11 +103,12 @@ function DashboardHome() {
         });
       } else {
         // Calculate stats from issues
-        const resolvedIssues = allIssues.filter(i => i.status === 'resolved');
-        const resolutionRate = allIssues.length > 0 
-          ? Math.round((resolvedIssues.length / allIssues.length) * 100) 
-          : 0;
-        
+        const resolvedIssues = allIssues.filter((i) => i.status === "resolved");
+        const resolutionRate =
+          allIssues.length > 0
+            ? Math.round((resolvedIssues.length / allIssues.length) * 100)
+            : 0;
+
         setStats({
           areaIssues: allIssues.length,
           resolutionRate,
@@ -108,25 +116,28 @@ function DashboardHome() {
           verifiedCount: resolvedIssues.length,
         });
       }
-      
+
       // Get top issues by upvotes
       const sortedByUpvotes = [...allIssues]
         .sort((a, b) => (b.upvotes?.length || 0) - (a.upvotes?.length || 0))
         .slice(0, 5);
-      
+
       // Get recent issues
       const recentSorted = [...allIssues]
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 6);
 
       // Get pending verifications (issues needing community verification)
-      const pendingIssues = unverifiedResponse?.data?.issues || 
-        allIssues.filter(i => i.status === 'reported' || i.status === 'resolved');
+      const pendingIssues =
+        unverifiedResponse?.data?.issues ||
+        allIssues.filter(
+          (i) => i.status === "reported" || i.status === "resolved"
+        );
 
       setTopIssues(sortedByUpvotes);
       setRecentIssues(recentSorted);
       setPendingVerifications(pendingIssues.slice(0, 5));
-      
+
       // Set user profile
       if (profileResponse) {
         setUserProfile(profileResponse.data || profileResponse);
@@ -135,7 +146,6 @@ function DashboardHome() {
       // Generate recent activity from issues
       const activity = generateRecentActivity(allIssues);
       setRecentActivity(activity);
-
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setError("Failed to load dashboard data");
@@ -147,15 +157,18 @@ function DashboardHome() {
   // Generate recent activity from issues
   const generateRecentActivity = (issues) => {
     const activities = [];
-    const sortedIssues = [...issues].sort((a, b) => 
-      new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+    const sortedIssues = [...issues].sort(
+      (a, b) =>
+        new Date(b.updatedAt || b.createdAt) -
+        new Date(a.updatedAt || a.createdAt)
     );
 
-    sortedIssues.slice(0, 10).forEach(issue => {
-      const timeDiff = Date.now() - new Date(issue.updatedAt || issue.createdAt).getTime();
+    sortedIssues.slice(0, 10).forEach((issue) => {
+      const timeDiff =
+        Date.now() - new Date(issue.updatedAt || issue.createdAt).getTime();
       const timeAgo = formatTimeAgo(timeDiff);
 
-      if (issue.status === 'resolved') {
+      if (issue.status === "resolved") {
         activities.push({
           id: `resolved-${issue._id}`,
           type: "verification",
@@ -164,7 +177,7 @@ function DashboardHome() {
           icon: CheckCircle2,
           color: "emerald",
         });
-      } else if (issue.status === 'reported') {
+      } else if (issue.status === "reported") {
         activities.push({
           id: `reported-${issue._id}`,
           type: "report",
@@ -185,10 +198,10 @@ function DashboardHome() {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
-    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
     if (minutes > 0) return `${minutes} min ago`;
-    return 'Just now';
+    return "Just now";
   };
 
   if (loading) {
@@ -243,7 +256,9 @@ function DashboardHome() {
                 {user?.username || "Community Member"}
               </p>
               <p className="text-xs text-violet-300">
-                {userProfile?.isProfileComplete ? "Profile Complete ✓" : "Complete Profile"}
+                {userProfile?.isProfileComplete
+                  ? "Profile Complete ✓"
+                  : "Complete Profile"}
               </p>
             </div>
           </div>
@@ -308,18 +323,21 @@ function DashboardHome() {
                   className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3"
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`rounded-full px-2 py-1 text-xs ${
-                      issue.status === 'resolved' 
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-amber-500/20 text-amber-400'
-                    }`}>
-                      {issue.status?.charAt(0).toUpperCase() + issue.status?.slice(1)}
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs ${
+                        issue.status === "resolved"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : "bg-amber-500/20 text-amber-400"
+                      }`}
+                    >
+                      {issue.status?.charAt(0).toUpperCase() +
+                        issue.status?.slice(1)}
                     </span>
                     <span className="text-sm text-white truncate max-w-[180px]">
                       {issue.title}
                     </span>
                   </div>
-                  <button 
+                  <button
                     onClick={() => navigate("/dashboard/community/verify")}
                     className="rounded-lg bg-rose-500/20 px-3 py-1 text-xs text-rose-400 hover:bg-rose-500/30"
                   >
@@ -365,13 +383,17 @@ function DashboardHome() {
                       {index + 1}
                     </span>
                     <div>
-                      <p className="text-sm text-white truncate max-w-[200px]">{issue.title}</p>
+                      <p className="text-sm text-white truncate max-w-[200px]">
+                        {issue.title}
+                      </p>
                       <p className="text-xs text-white/40">{issue.category}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 text-rose-400">
                     <ThumbsUp className="h-4 w-4" />
-                    <span className="text-sm font-semibold">{issue.upvotes?.length || 0}</span>
+                    <span className="text-sm font-semibold">
+                      {issue.upvotes?.length || 0}
+                    </span>
                   </div>
                 </div>
               ))
@@ -442,8 +464,12 @@ function DashboardHome() {
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-white">District Heatmap</h3>
-            <p className="text-xs text-white/40">Issue density in your district</p>
+            <h3 className="text-lg font-semibold text-white">
+              District Heatmap
+            </h3>
+            <p className="text-xs text-white/40">
+              Issue density in your district
+            </p>
           </div>
           <button
             onClick={() => navigate("/dashboard/community/map")}
@@ -454,9 +480,9 @@ function DashboardHome() {
           </button>
         </div>
         <div className="h-64 rounded-lg overflow-hidden border border-white/10">
-          <HeatmapViewer 
-            userRole="community" 
-            defaultCenter={[28.6139, 77.2090]}
+          <HeatmapViewer
+            userRole="community"
+            defaultCenter={[28.6139, 77.209]}
             defaultZoom={12}
             height="256px"
             showControls={false}
@@ -465,15 +491,21 @@ function DashboardHome() {
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="rounded-lg bg-rose-500/10 p-3 text-center border border-rose-500/20">
             <p className="text-xs text-rose-400">High Priority</p>
-            <p className="text-2xl font-bold text-rose-400">{recentIssues.filter(i => i.priority === 'high').length}</p>
+            <p className="text-2xl font-bold text-rose-400">
+              {recentIssues.filter((i) => i.priority === "high").length}
+            </p>
           </div>
           <div className="rounded-lg bg-amber-500/10 p-3 text-center border border-amber-500/20">
             <p className="text-xs text-amber-400">Medium Priority</p>
-            <p className="text-2xl font-bold text-amber-400">{recentIssues.filter(i => i.priority === 'medium').length}</p>
+            <p className="text-2xl font-bold text-amber-400">
+              {recentIssues.filter((i) => i.priority === "medium").length}
+            </p>
           </div>
           <div className="rounded-lg bg-emerald-500/10 p-3 text-center border border-emerald-500/20">
             <p className="text-xs text-emerald-400">Low Priority</p>
-            <p className="text-2xl font-bold text-emerald-400">{recentIssues.filter(i => i.priority === 'low').length}</p>
+            <p className="text-2xl font-bold text-emerald-400">
+              {recentIssues.filter((i) => i.priority === "low").length}
+            </p>
           </div>
         </div>
       </div>
@@ -580,14 +612,18 @@ function CommunityChatPage() {
 // Map/Heatmap page
 function MapPage() {
   const { activeDistrictId } = useDistrict();
-  const CommunityHeatmap = React.lazy(() => import("../../components/Dashboard/Community/CommunityHeatmap"));
-  
+  const CommunityHeatmap = React.lazy(() =>
+    import("../../components/Dashboard/Community/CommunityHeatmap")
+  );
+
   return (
-    <React.Suspense fallback={
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
-      </div>
-    }>
+    <React.Suspense
+      fallback={
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+        </div>
+      }
+    >
       <CommunityHeatmap districtId={activeDistrictId} />
     </React.Suspense>
   );
@@ -599,6 +635,12 @@ function VerificationQueuePage() {
   return <VerificationQueue districtId={activeDistrictId} />;
 }
 
+// Gamification/Reputation page with district filtering
+function ReputationPage() {
+  const { activeDistrictId } = useDistrict();
+  return <GamificationDashboard districtId={activeDistrictId} />;
+}
+
 // Inner dashboard with routes
 function CommunityDashboardInner() {
   return (
@@ -607,11 +649,12 @@ function CommunityDashboardInner() {
       <div className="mb-6">
         <DistrictSwitcher />
       </div>
-      
+
       <Routes>
         <Route index element={<DashboardHome />} />
         <Route path="area" element={<AreaIssuesPage />} />
         <Route path="verify" element={<VerificationQueuePage />} />
+        <Route path="reputation" element={<ReputationPage />} />
         <Route path="stats" element={<CommunityStatsPage />} />
         <Route path="chat" element={<CommunityChatPage />} />
         <Route path="map" element={<MapPage />} />

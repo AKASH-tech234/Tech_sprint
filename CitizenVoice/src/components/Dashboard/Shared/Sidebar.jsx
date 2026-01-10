@@ -20,6 +20,7 @@ import {
   MessageSquare,
   ClipboardCheck,
   User,
+  Trophy,
 } from "lucide-react";
 
 // Menu configurations by role
@@ -57,7 +58,12 @@ const menuConfig = {
       path: "/dashboard/official/review-queue",
       adminOnly: true,
     },
-    { icon: Users, label: "Team Management", path: "/dashboard/official/team", adminOnly: true },
+    {
+      icon: Users,
+      label: "Team Management",
+      path: "/dashboard/official/team",
+      adminOnly: true,
+    },
     {
       icon: MessageSquare,
       label: "Messages",
@@ -78,6 +84,11 @@ const menuConfig = {
       icon: CheckCircle2,
       label: "Verification Queue",
       path: "/dashboard/community/verify",
+    },
+    {
+      icon: Trophy,
+      label: "Reputation",
+      path: "/dashboard/community/reputation",
     },
     {
       icon: MessageSquare,
@@ -104,7 +115,7 @@ export function Sidebar({ isOpen, onClose, role = "citizen" }) {
   const isOfficialAdmin = !!user?.isOfficialAdmin;
   const menuItemsRaw = menuConfig[role] || menuConfig.citizen;
   const menuItems =
-    role === 'official' && !isOfficialAdmin
+    role === "official" && !isOfficialAdmin
       ? menuItemsRaw.filter((item) => !item.adminOnly)
       : menuItemsRaw;
 
@@ -157,7 +168,10 @@ export function Sidebar({ isOpen, onClose, role = "citizen" }) {
                 />
               </svg>
             </div>
-            <span className="text-sm font-bold tracking-widest text-white uppercase" style={{ letterSpacing: "0.1em" }}>
+            <span
+              className="text-sm font-bold tracking-widest text-white uppercase"
+              style={{ letterSpacing: "0.1em" }}
+            >
               CITIZEN VOICE
             </span>
           </div>
@@ -223,7 +237,7 @@ export function Sidebar({ isOpen, onClose, role = "citizen" }) {
               <span className="ml-auto flex h-2 w-2 rounded-full bg-amber-500" />
             )}
           </NavLink>
-          
+
           <div className="flex items-center gap-3 rounded-lg bg-white/5 p-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-violet-500">
               <span className="text-sm font-semibold text-white">
