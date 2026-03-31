@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -27,7 +29,7 @@ import ragRoutes from "./src/routes/ragRoutes.js";
 import Message from "./src/models/message.js";
 import { initRag } from "./src/rag/index.js";
 // Load environment variables FIRST
-// dotenv.config({ path: path.join(__dirname, ".env") });
+// Loaded via `dotenv/config` import at the top of this file.
 
 // // Get __dirname equivalent in ES modules
 // const __filename = fileURLToPath(import.meta.url);
