@@ -65,6 +65,12 @@ const menuConfig = {
       adminOnly: true,
     },
     {
+      icon: ClipboardList,
+      label: "Payments",
+      path: "/dashboard/official/payments",
+      adminOnly: true,
+    },
+    {
       icon: Users,
       label: "Team Management",
       path: "/dashboard/official/team",
