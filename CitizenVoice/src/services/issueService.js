@@ -581,6 +581,24 @@ class IssueService {
     return response.json();
   }
 
+  // Get funding/payment history (admin only)
+  async getFundingHistory(filters = {}) {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(
+      `${API_BASE_URL}/officials/payments/history?${params}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch funding history");
+    }
+
+    return response.json();
+  }
+
   // ============== QUICK ACTIONS ==============
 
   // Create work order
