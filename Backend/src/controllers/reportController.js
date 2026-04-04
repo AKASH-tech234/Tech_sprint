@@ -250,10 +250,11 @@ export const reviewReport = asyncHandler(async (req, res) => {
   // If approved, update issue status based on report type
   if (decision === 'approve') {
     if (report.reportType === 'verification') {
-      // Verification approved → status becomes 'in-progress'
+      // Verification approved → status becomes 'verified'
+      // Next step: funding/payment must succeed before work starts (in-progress)
       if (report.outcome === 'verified') {
-        issue.status = 'in-progress';
-        console.log('✅ [ReviewReport] Issue status changed to in-progress');
+        issue.status = 'verified';
+        console.log('✅ [ReviewReport] Issue status changed to verified');
       } else {
         // If not verified, issue can be rejected
         issue.status = 'rejected';

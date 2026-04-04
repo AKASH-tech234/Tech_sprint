@@ -27,6 +27,11 @@ import {
   getReportById,
 } from "../controllers/officialController.js";
 import {
+  createFundingOrder,
+  getFundingHistory,
+  verifyFundingPayment,
+} from "../controllers/paymentController.js";
+import {
   getPendingReports,
   getReportDetails,
   reviewReport,
@@ -71,6 +76,15 @@ router.get("/reports/pending", requireOfficialAdmin, getPendingReports);
 router.get("/reports/:reportId", requireOfficialAdmin, getReportDetails);
 router.post("/reports/:reportId/review", requireOfficialAdmin, reviewReport);
 router.get("/reports/history/:issueId", requireOfficialAdmin, getIssueReports);
+
+// Payments (admin only)
+router.post(
+  "/payments/create-order",
+  requireOfficialAdmin,
+  createFundingOrder
+);
+router.post("/payments/verify", requireOfficialAdmin, verifyFundingPayment);
+router.get("/payments/history", requireOfficialAdmin, getFundingHistory);
 
 // Quick actions - Work Orders
 router.post("/quick-actions/work-order", requireOfficialAdmin, createWorkOrder);

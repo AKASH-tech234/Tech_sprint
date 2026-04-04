@@ -47,7 +47,16 @@ const issueSchema = new mongoose.Schema(
     status: {
       type: String,
       required: true,
-      enum: ["reported", "acknowledged", "in-progress", "resolved", "rejected"],
+      // WORKFLOW: reported -> acknowledged (assigned) -> verified (verification approved)
+      // -> in-progress (after funding/payment) -> resolved
+      enum: [
+        "reported",
+        "acknowledged",
+        "verified",
+        "in-progress",
+        "resolved",
+        "rejected",
+      ],
       default: "reported",
     },
     location: {
