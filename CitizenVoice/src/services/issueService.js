@@ -531,6 +531,56 @@ class IssueService {
     return response.json();
   }
 
+  // === Payments (Razorpay) ===
+
+  // Create a Razorpay order to fund a verified issue
+  async createFundingOrder({ issueId, amount, notes }) {
+    const response = await fetch(`${API_BASE_URL}/officials/payments/create-order`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ issueId, amount, notes }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to create funding order");
+    }
+
+    return response.json();
+  }
+
+  // Verify Razorpay payment signature and unlock issue progress
+  async verifyFundingPayment({
+    transactionId,
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+  }) {
+    const response = await fetch(`${API_BASE_URL}/officials/payments/verify`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        transactionId,
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to verify payment");
+    }
+
+    return response.json();
+  }
+
   // ============== QUICK ACTIONS ==============
 
   // Create work order
