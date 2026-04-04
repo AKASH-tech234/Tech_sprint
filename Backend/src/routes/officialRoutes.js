@@ -28,6 +28,7 @@ import {
 } from "../controllers/officialController.js";
 import {
   createFundingOrder,
+  getFundingHistory,
   verifyFundingPayment,
 } from "../controllers/paymentController.js";
 import {
@@ -83,6 +84,7 @@ router.post(
   createFundingOrder
 );
 router.post("/payments/verify", requireOfficialAdmin, verifyFundingPayment);
+router.get("/payments/history", requireOfficialAdmin, getFundingHistory);
 
 // Quick actions - Work Orders
 router.post("/quick-actions/work-order", requireOfficialAdmin, createWorkOrder);
