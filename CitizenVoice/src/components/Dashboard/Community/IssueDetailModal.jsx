@@ -19,6 +19,7 @@ import { cn } from "../../../lib/utils";
 const statusConfig = {
   reported: { label: "Reported", color: "bg-gray-500/20 text-gray-400" },
   acknowledged: { label: "Acknowledged", color: "bg-blue-500/20 text-blue-400" },
+  verified: { label: "Verified", color: "bg-blue-500/20 text-blue-400" },
   "in-progress": { label: "In Progress", color: "bg-amber-500/20 text-amber-400" },
   resolved: { label: "Resolved", color: "bg-emerald-500/20 text-emerald-400" },
   rejected: { label: "Rejected", color: "bg-rose-500/20 text-rose-400" },
