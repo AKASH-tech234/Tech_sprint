@@ -169,3 +169,43 @@ export const verifyFundingPayment = asyncHandler(async (req, res) => {
     )
   );
 });
+
+// GET /api/officials/payments/history
+export const getFundingHistory = asyncHandler(async (req, res) => {
+  const { status, issueId, toMember, page = 1, limit = 20 } = req.query;
+
+  const query = { fromOfficial: req.user._id };
+  if (status) query.status = status;
+  if (issueId) query.issue = issueId;
+  if (toMember) query.toMember = toMember;
+
+  const numericLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+  const numericPage = Math.max(parseInt(page, 10) || 1, 1);
+  const skip = (numericPage - 1) * numericLimit;
+
+  const [transactions, total] = await Promise.all([
+    FundingTransaction.find(query)
+      .populate("issue", "issueId title status")
+      .populate("toMember", "username email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(numericLimit),
+    FundingTransaction.countDocuments(query),
+  ]);
+
+  res.json(
+    new ApiResponse(
+      200,
+      {
+        transactions,
+        pagination: {
+          total,
+          page: numericPage,
+          pages: Math.ceil(total / numericLimit),
+          limit: numericLimit,
+        },
+      },
+      "Funding history fetched"
+    )
+  );
+});
