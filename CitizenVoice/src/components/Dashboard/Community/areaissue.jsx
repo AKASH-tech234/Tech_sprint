@@ -25,10 +25,6 @@ const statusConfig = {
     label: "Acknowledged",
     color: "bg-blue-500/20 text-blue-400",
   },
-  verified: {
-    label: "Verified",
-    color: "bg-blue-500/20 text-blue-400",
-  },
   "in-progress": {
     label: "In Progress",
     color: "bg-amber-500/20 text-amber-400",

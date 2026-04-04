@@ -28,25 +28,20 @@ const statusConfig = {
     color: "bg-blue-500/20 text-blue-400",
     order: 1,
   },
-  verified: {
-    label: "Verified",
-    color: "bg-blue-500/20 text-blue-400",
-    order: 2,
-  },
   "in-progress": {
     label: "In Progress",
     color: "bg-amber-500/20 text-amber-400",
-    order: 3,
+    order: 2,
   },
   resolved: {
     label: "Resolved",
     color: "bg-emerald-500/20 text-emerald-400",
-    order: 4,
+    order: 3,
   },
   rejected: {
     label: "Rejected",
     color: "bg-rose-500/20 text-rose-400",
-    order: 5,
+    order: 4,
   },
 };
 

@@ -39,7 +39,6 @@
     "node-geocoder": "^4.4.1",
     "nodemailer": "^7.0.12",
     "openai": "^6.15.0",
-    "razorpay": "^2.9.6",
     "socket.io": "^4.8.3"
   }
 }

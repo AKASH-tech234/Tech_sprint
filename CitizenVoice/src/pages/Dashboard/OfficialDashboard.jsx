@@ -9,7 +9,6 @@ import { TeamManagement } from "../../components/Dashboard/Official/Teammanageme
 import { TeamChat } from "../../components/Dashboard/Official/TeamChat";
 import { Analytics } from "../../components/Dashboard/Official/Analytics";
 import { ReviewQueue } from "../../components/Dashboard/Official/ReviewQueue";
-import { PaymentHistory } from "../../components/Dashboard/Official/PaymentHistory";
 import HeatmapViewer from "../../components/Dashboard/Shared/HeatmapViewer";
 import { issueService } from "../../services/issueService";
 import { useAuth } from "../../context/Authcontext";
@@ -580,7 +579,6 @@ export default function OfficialDashboard() {
         <Route path="assigned" element={<IssueManagement />} />
         <Route path="issue/:issueId" element={<IssueDetailPage />} />
         <Route path="review-queue" element={<ReviewQueue />} />
-        <Route path="payments" element={<PaymentHistory />} />
         <Route path="team" element={<TeamManagement />} />
         <Route path="chat" element={<TeamChat />} />
         <Route path="chat/:memberId" element={<TeamChat />} />

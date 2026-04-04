@@ -182,7 +182,7 @@ function DashboardHome() {
       if (allIssuesResponse.data && allIssuesResponse.data.issues) {
         const allIssues = allIssuesResponse.data.issues;
         const activeIssues = allIssues.filter((i) =>
-          ["reported", "acknowledged", "verified", "in-progress"].includes(i.status)
+          ["reported", "acknowledged", "in-progress"].includes(i.status)
         ).length;
 
         const resolvedIssues = allIssues.filter(

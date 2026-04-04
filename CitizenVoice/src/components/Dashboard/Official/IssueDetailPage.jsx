@@ -41,12 +41,6 @@ const statusConfig = {
     icon: CheckCircle2,
     description: "Issue acknowledged and pending verification"
   },
-  verified: {
-    label: "Verified",
-    color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    icon: Shield,
-    description: "Verification approved; funding required to start work",
-  },
   "in-progress": { 
     label: "In Progress", 
     color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -85,11 +79,6 @@ export function IssueDetailPage() {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Razorpay funding
-  const [fundingAmount, setFundingAmount] = useState("");
-  const [fundingNotes, setFundingNotes] = useState("");
-  const [fundingLoading, setFundingLoading] = useState(false);
   
   // Track pending reports
   const [pendingVerification, setPendingVerification] = useState(null);
@@ -127,95 +116,6 @@ export function IssueDetailPage() {
       setError(err.message || "Failed to load issue details");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadRazorpayScript = () => {
-    return new Promise((resolve, reject) => {
-      if (window?.Razorpay) return resolve(true);
-
-      const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
-      if (existing) {
-        existing.addEventListener("load", () => resolve(true));
-        existing.addEventListener("error", () => reject(new Error("Failed to load Razorpay")));
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-      script.onload = () => resolve(true);
-      script.onerror = () => reject(new Error("Failed to load Razorpay"));
-      document.body.appendChild(script);
-    });
-  };
-
-  const handleFundAndStartWork = async () => {
-    try {
-      if (!issue?._id) return;
-      const numericAmount = Number(fundingAmount);
-      if (!numericAmount || Number.isNaN(numericAmount) || numericAmount <= 0) {
-        alert("Enter a valid amount");
-        return;
-      }
-
-      setFundingLoading(true);
-
-      await loadRazorpayScript();
-
-      const createResp = await issueService.createFundingOrder({
-        issueId: issue._id,
-        amount: numericAmount,
-        notes: fundingNotes,
-      });
-
-      const data = createResp?.data || createResp;
-      const order = data?.order;
-      const keyId = data?.keyId;
-      const transactionId = data?.transactionId;
-
-      if (!order?.id || !keyId || !transactionId) {
-        throw new Error("Invalid payment order response");
-      }
-
-      const options = {
-        key: keyId,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Citizen Voice",
-        description: `Funding for ${issue.issueId || "issue"}`,
-        order_id: order.id,
-        handler: async (response) => {
-          try {
-            await issueService.verifyFundingPayment({
-              transactionId,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            });
-            await loadIssueDetails();
-          } catch (err) {
-            console.error("Payment verify error:", err);
-            alert(err.message || "Payment verification failed");
-          }
-        },
-        prefill: {
-          name: user?.username || "",
-          email: user?.email || "",
-        },
-      };
-
-      const rz = new window.Razorpay(options);
-      rz.on("payment.failed", (resp) => {
-        console.error("Razorpay payment failed:", resp);
-        alert(resp?.error?.description || "Payment failed");
-      });
-      rz.open();
-    } catch (err) {
-      console.error("Funding error:", err);
-      alert(err.message || "Failed to start payment");
-    } finally {
-      setFundingLoading(false);
     }
   };
 
@@ -630,29 +530,7 @@ export function IssueDetailPage() {
                   </div>
                 )}
 
-                {issue.status === "verified" && (
-                  <div className="rounded-xl border border-blue-500/30 bg-gradient-to-br from-blue-500/15 to-cyan-500/5 p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 ring-2 ring-blue-500/30">
-                        <Shield className="h-5 w-5 text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-blue-400">Verified by Team Leader</p>
-                        <p className="text-xs text-blue-300/70">Waiting for funding approval</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-white/5 p-3">
-                      <Clock className="h-4 w-4 text-amber-400" />
-                      <p className="text-xs text-white/80">
-                        Funds are required before work can start. Please wait for the team leader to complete payment.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {issue.status !== "acknowledged" &&
-                  issue.status !== "in-progress" &&
-                  issue.status !== "verified" && (
+                {issue.status !== "acknowledged" && issue.status !== "in-progress" && (
                   <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
                     <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-white/30" />
                     <p className="text-sm text-white/50">
@@ -664,66 +542,6 @@ export function IssueDetailPage() {
                     </p>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {/* Funding Panel for Admin */}
-          {isOfficialAdmin && issue.status === "verified" && (
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-sm">
-              <div className="flex items-center gap-3 border-b border-white/10 bg-white/5 px-6 py-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/20">
-                  <Shield className="h-4 w-4 text-rose-400" />
-                </div>
-                <h2 className="font-semibold text-white">Funding Required</h2>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
-                  <p className="mb-1 text-sm font-medium text-blue-400">Verification approved</p>
-                  <p className="text-xs text-white/60">Collect funds and start work only after successful payment.</p>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs text-white/60">Amount (INR)</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={fundingAmount}
-                      onChange={(e) => setFundingAmount(e.target.value)}
-                      className="h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder-white/30 outline-none focus:border-rose-500/50"
-                      placeholder="Enter amount"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-white/60">Notes (optional)</label>
-                    <input
-                      type="text"
-                      value={fundingNotes}
-                      onChange={(e) => setFundingNotes(e.target.value)}
-                      className="h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder-white/30 outline-none focus:border-rose-500/50"
-                      placeholder="e.g., materials advance"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleFundAndStartWork}
-                  disabled={fundingLoading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-500 py-3.5 text-sm font-semibold text-white transition-all hover:bg-rose-600 disabled:opacity-60"
-                >
-                  {fundingLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Starting payment...
-                    </>
-                  ) : (
-                    <>
-                      <ArrowUpRight className="h-5 w-5" />
-                      Fund & Start Work
-                    </>
-                  )}
-                </button>
               </div>
             </div>
           )}

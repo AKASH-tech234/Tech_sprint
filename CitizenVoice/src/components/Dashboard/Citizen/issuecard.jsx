@@ -30,11 +30,6 @@ const statusConfig = {
     color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
     icon: CheckCircle2,
   },
-  verified: {
-    label: "Verified",
-    color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    icon: CheckCircle2,
-  },
   "in-progress": {
     label: "In Progress",
     color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
